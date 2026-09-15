@@ -1,3 +1,4 @@
+from .conflicts import Conflict, evaluate_conflicts
 from .entities import ManagedServer, Reservation, ServerCapacity, TaskRequest, User
 from .errors import (
     CapacityExceeded,
@@ -11,6 +12,7 @@ from .errors import (
 from .transitions import transition_request
 
 __all__ = [
+    "Conflict",
     "CapacityExceeded",
     "DomainError",
     "DomainValidationError",
@@ -23,5 +25,6 @@ __all__ = [
     "ServerDisabled",
     "TaskRequest",
     "User",
+    "evaluate_conflicts",
     "transition_request",
 ]
