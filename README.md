@@ -13,7 +13,7 @@ The initial target is a small set of Linux compute servers on the same private n
 
 ## Project status
 
-**Architecture/design phase. No production deployment yet.**
+**Architecture approved; implementation planning in progress. No production deployment yet.**
 
 The design baseline is maintained under `docs/`. Start with:
 
