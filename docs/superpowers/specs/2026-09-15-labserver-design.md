@@ -1,7 +1,7 @@
 # LabServer Initial Architecture Design
 
 Date: 2026-09-15
-Status: Proposed for review
+Status: Approved
 
 ## 1. Problem statement
 
