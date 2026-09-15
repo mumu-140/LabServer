@@ -4,84 +4,69 @@ Last updated: 2026-09-15
 
 ## Status
 
-Milestone 1 central planning core has been implemented on `feat/m1-foundation-core` and is under final review in PR #3. It is not yet merged to `main` and nothing has been deployed to lab servers.
+Milestone 1 central planning core is merged and verified on `main`. It has not been deployed to lab servers.
+
+The product requirement has since been clarified: planning/scheduling is only a lightweight shared declaration of intended use, not an approval, reservation-lock, queue, or scheduler workflow. M1.1 is therefore a pre-deployment simplification milestone.
 
 ## Main baseline
 
-Merged architecture/planning baseline:
-- PR #1 merged as `9f4c983bc009fac12b7838ee6b4fd5abf4bb8b60`;
-- PR #2 merged as `f3180f992205375f19f9eacace049890a6047e78`;
-- four-harness architecture fixed (`web`, `core`, `agent`, `ops`);
-- repository-wide `AGENTS.md` guardrails active;
-- approved spec: `docs/superpowers/specs/2026-09-15-labserver-design.md`;
-- M1 plan: `docs/superpowers/plans/2026-09-15-m1-foundation-core.md`.
+Merged baseline:
+- PR #1 architecture baseline: `9f4c983bc009fac12b7838ee6b4fd5abf4bb8b60`;
+- PR #2 M1 implementation plan: `f3180f992205375f19f9eacace049890a6047e78`;
+- PR #3 M1 implementation squash-merged as `faa19b09c4d5ad9ca34edd55527bef401fdcaf4a`;
+- merged-main CI run `34942758598`: completed / success;
+- locked sync, Ruff, mypy, and pytest all passed on merged `main`.
 
-## Active implementation
+No production deployment has occurred.
+
+## Current design work
 
 Branch:
 
-`feat/m1-foundation-core`
+`docs/m1-1-simple-planning-design`
 
-Pull request:
+Design:
 
-`#3 feat: implement milestone 1 foundation and core`
+`docs/superpowers/specs/2026-09-15-m1-1-simple-planning-design.md`
 
-## Milestone 1 implemented scope
+Status: draft for user review.
 
-M1 contains only the central planning core:
-- Python 3.13 + uv workspace and locked dependency graph;
-- GitHub Actions CI with locked sync, Ruff, mypy, and pytest;
-- shared Pydantic contracts and canonical enums;
-- pure request lifecycle/domain rules;
-- logical managed-server registry using stable keys rather than IP identity;
-- SQLite persistence with Alembic migration from the first schema;
-- SQLite foreign-key enforcement and repository/unit-of-work boundaries;
-- default-deny human authorization dependency with `admin` / `member` application rules;
-- advisory CPU, memory, aggregate GPU, and explicit GPU-device conflict evaluation;
-- transactional and idempotent request approval into reservations;
-- versioned FastAPI routes under `/api/v1` plus `/healthz`;
-- stable machine-readable API error envelope;
-- architecture-boundary tests preventing routes from importing persistence/SQLAlchemy and contracts from depending on core;
-- Core v1 API documentation at `docs/api/core-v1.md`.
+## M1.1 purpose
 
-## Verification evidence
+Simplify the planning model before deployment:
+- replace the public `TaskRequest -> approval -> Reservation` workflow with one `PlanEntry` concept;
+- publishing a plan means only "I intend to use these resources during this time window";
+- members can create/edit/cancel their own plans;
+- admins can correct any plan;
+- conflicts remain advisory and never lock or dispatch resources;
+- add a simple shared Schedule web surface;
+- remove approval/rejection language and scheduler semantics.
 
-Fresh local verification of the M1 tree:
-- fresh empty SQLite database upgraded successfully to Alembic head;
-- expected tables present: `alembic_version`, `audit_events`, `managed_servers`, `reservations`, `task_requests`, `users`;
-- API smoke suite: 5 passed;
-- full suite: 83 passed;
-- Ruff: all checks passed;
-- mypy: success across 36 source files.
+The current M1 request/reservation implementation remains on `main` until M1.1 is reviewed, planned, implemented, tested, and merged.
 
-Remote verification before this status-only update:
-- GitHub Actions run `34935656728`: completed / success;
-- locked `uv sync`, Ruff, mypy, and pytest all succeeded.
+## M2 direction after M1.1
 
-The final PR head must be re-verified by CI after this documentation update before merge.
+M2 will add observability while preserving the lightweight coordination model:
+- Docker-first deployment;
+- Beszel as the primary infrastructure-monitoring source of truth;
+- a minimal read-only Runtime Collector only for user/PID/GPU-process attribution not provided by Beszel;
+- Running view combining monitoring state with runtime ownership;
+- host-specific deployment values remain outside Git and compose/templates stay host-agnostic.
 
-## Explicitly not implemented in Milestone 1
-
-- Lab Agent / `psutil` / `nvitop` / NVML;
-- Beszel integration;
-- real lab IP configuration;
-- browser UI or SSE;
-- live process/user observation;
-- plan-vs-actual reconciliation;
-- usage/statistics aggregation;
-- production deployment;
-- remote shell, process control, job submission, or scheduler behavior.
-
-## Next gate
-
-1. Complete final PR #3 review and verify its latest head.
-2. Squash-merge M1 only after review approval.
-3. Verify CI on merged `main`.
-4. Only then begin Milestone 2: read-only Lab Agent + Running view, preserving the approved agent/core/web boundaries.
+Detailed M2 design is intentionally gated behind M1.1 design approval so planning semantics are settled first.
 
 ## Important constraints
 
-- The GitHub repository is currently public. Never commit actual private-network IPs or operational secrets.
-- V1 remains observation + planning + reconciliation + reporting. It is not a scheduler.
-- Human authentication transport is not implemented in M1; protected API routes are default-deny and tests use dependency overrides.
-- Managed-server data collection remains read-only and is not introduced until M2.
+- The GitHub repository is public. Never commit real private-network IPs, credentials, SSH material, tokens, usernames, or private command lines.
+- Deployment configuration must remain host-agnostic; the current central deployment machine is an operational choice, not a repository constant.
+- LabServer is not a scheduler. It coordinates intent, observes current use, reconciles where useful, and reports.
+- Beszel owns infrastructure monitoring/history/alerts; LabServer must not duplicate a telemetry platform.
+- Runtime collection is read-only. No remote shell, process kill, renice, package installation, or job submission.
+- Human authentication transport is not yet implemented; protected routes remain default-deny until an explicit design selects it.
+
+## Next gate
+
+1. User reviews and approves the M1.1 simple-planning design.
+2. Write the M1.1 implementation plan.
+3. Implement and verify M1.1 before any production deployment.
+4. Then finalize the M2 Docker + Beszel + Runtime Collector design and plan.
