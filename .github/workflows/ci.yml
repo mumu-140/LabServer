@@ -28,7 +28,7 @@ jobs:
       - run: uv run pytest -q
       - name: Commit verified lockfile
         run: |
-          if git diff --quiet -- uv.lock; then
+          if [ -z "$(git status --porcelain -- uv.lock)" ]; then
             echo "uv.lock already matches"
             exit 0
           fi
