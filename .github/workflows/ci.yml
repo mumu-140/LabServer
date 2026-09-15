@@ -27,10 +27,12 @@ jobs:
         run: |
           python -m pip download -r requirements-bootstrap.txt -d wheelhouse
           python -m pip download hatchling colorama==0.4.6 -d wheelhouse
+          cp "$(command -v uv)" uv-bootstrap
       - uses: actions/upload-artifact@v4
         with:
           name: task1-bootstrap-deps
           path: |
             uv.lock
+            uv-bootstrap
             wheelhouse/
           if-no-files-found: error
