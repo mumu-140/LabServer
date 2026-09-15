@@ -6,11 +6,10 @@ from uuid import UUID
 from labserver_contracts.common import (
     ConflictCertainty,
     ConflictResource,
-    ReservationStatus,
 )
 from labserver_contracts.plans import PlanDisplayState
 
-from .entities import PlanEntry, Reservation, ServerCapacity
+from .entities import PlanEntry, ServerCapacity
 
 NumericOrDevices = float | tuple[int, ...]
 
@@ -280,41 +279,3 @@ def evaluate_plan_conflicts(
         conflicts.extend(_device_conflicts(candidate, active, start_at, end_at))
 
     return tuple(_coalesce(conflicts))
-
-
-def _reservation_as_plan(reservation: Reservation) -> PlanEntry:
-    """Temporary M1 adapter; removed with the reservation slice in Task 7."""
-    return PlanEntry(
-        id=reservation.id,
-        owner_id=reservation.owner_id,
-        server_id=reservation.server_id,
-        title=reservation.title,
-        project=None,
-        start_at=reservation.start_at,
-        end_at=reservation.end_at,
-        cpu_cores=reservation.cpu_cores,
-        memory_gb=reservation.memory_gb,
-        gpu_count=reservation.gpu_count,
-        gpu_ids=reservation.gpu_ids,
-        note=None,
-        cancelled_at=(
-            reservation.updated_at if reservation.status is ReservationStatus.CANCELLED else None
-        ),
-        created_at=reservation.created_at,
-        updated_at=reservation.updated_at,
-    )
-
-
-def evaluate_conflicts(
-    candidate: Reservation,
-    existing: Sequence[Reservation],
-    capacity: ServerCapacity,
-) -> list[Conflict]:
-    """Deprecated M1 surface kept only until the reservation slice is deleted."""
-    return list(
-        evaluate_plan_conflicts(
-            _reservation_as_plan(candidate),
-            [_reservation_as_plan(reservation) for reservation in existing],
-            capacity,
-        )
-    )

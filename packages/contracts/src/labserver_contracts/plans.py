@@ -1,8 +1,7 @@
 """Canonical simple-planning DTOs.
 
 Planning means only: "I intend to use this server/resource during this window."
-There is no submission, approval, reservation lock, queue, priority, dispatch,
-or enforcement in this contract surface.
+Publication is never gated, queued, or dispatched on this contract surface.
 """
 
 from datetime import datetime

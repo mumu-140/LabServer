@@ -2,12 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-from labserver_contracts.common import (
-    ReservationSource,
-    ReservationStatus,
-    TaskRequestStatus,
-    UserRole,
-)
+from labserver_contracts.common import UserRole
 from labserver_contracts.plans import PlanDisplayState
 
 
@@ -61,45 +56,6 @@ class PlanEntry:
     gpu_ids: tuple[int, ...] | None
     note: str | None
     cancelled_at: datetime | None
-    created_at: datetime
-    updated_at: datetime
-
-
-@dataclass(frozen=True, slots=True)
-class TaskRequest:
-    id: UUID
-    requester_id: UUID
-    title: str
-    project: str | None
-    preferred_server_id: UUID
-    planned_start: datetime
-    planned_duration_minutes: int
-    requested_cpu_cores: int
-    requested_memory_gb: float | None
-    requested_gpu_count: int
-    preferred_gpu_ids: tuple[int, ...] | None
-    note: str | None
-    status: TaskRequestStatus
-    created_at: datetime
-    updated_at: datetime
-    status_changed_by: UUID | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class Reservation:
-    id: UUID
-    request_id: UUID | None
-    owner_id: UUID
-    server_id: UUID
-    title: str
-    start_at: datetime
-    end_at: datetime
-    cpu_cores: int
-    memory_gb: float | None
-    gpu_count: int
-    gpu_ids: tuple[int, ...] | None
-    status: ReservationStatus
-    source: ReservationSource
     created_at: datetime
     updated_at: datetime
 

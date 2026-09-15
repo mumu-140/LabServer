@@ -1,7 +1,5 @@
 from typing import ClassVar
 
-from labserver_contracts.common import TaskRequestStatus
-
 
 class DomainError(Exception):
     code: ClassVar[str] = "domain_error"
@@ -9,15 +7,6 @@ class DomainError(Exception):
     def __init__(self, message: str) -> None:
         super().__init__(message)
         self.message = message
-
-
-class InvalidTransition(DomainError):
-    code = "invalid_transition"
-
-    def __init__(self, source: TaskRequestStatus, target: TaskRequestStatus) -> None:
-        self.source = source
-        self.target = target
-        super().__init__(f"Request cannot transition from {source.value} to {target.value}")
 
 
 class Forbidden(DomainError):

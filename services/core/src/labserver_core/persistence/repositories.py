@@ -1,12 +1,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from labserver_contracts.common import (
-    ReservationSource,
-    ReservationStatus,
-    TaskRequestStatus,
-    UserRole,
-)
+from labserver_contracts.common import UserRole
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -14,9 +9,7 @@ from labserver_core.domain.entities import (
     AuditEvent,
     ManagedServer,
     PlanEntry,
-    Reservation,
     ServerCapacity,
-    TaskRequest,
     User,
 )
 
@@ -24,8 +17,6 @@ from .models import (
     AuditEventModel,
     ManagedServerModel,
     PlanEntryModel,
-    ReservationModel,
-    TaskRequestModel,
     UserModel,
 )
 
@@ -55,49 +46,6 @@ def _server_from_model(model: ManagedServerModel) -> ManagedServer:
         display_name=model.display_name,
         enabled=model.enabled,
         capacity=ServerCapacity(model.cpu_cores, model.memory_gb, model.gpu_count),
-        created_at=_as_utc(model.created_at),
-        updated_at=_as_utc(model.updated_at),
-    )
-
-
-def _request_from_model(model: TaskRequestModel) -> TaskRequest:
-    return TaskRequest(
-        id=model.id,
-        requester_id=model.requester_id,
-        title=model.title,
-        project=model.project,
-        preferred_server_id=model.preferred_server_id,
-        planned_start=_as_utc(model.planned_start),
-        planned_duration_minutes=model.planned_duration_minutes,
-        requested_cpu_cores=model.requested_cpu_cores,
-        requested_memory_gb=model.requested_memory_gb,
-        requested_gpu_count=model.requested_gpu_count,
-        preferred_gpu_ids=(
-            tuple(model.preferred_gpu_ids) if model.preferred_gpu_ids is not None else None
-        ),
-        note=model.note,
-        status=TaskRequestStatus(model.status),
-        created_at=_as_utc(model.created_at),
-        updated_at=_as_utc(model.updated_at),
-        status_changed_by=model.status_changed_by,
-    )
-
-
-def _reservation_from_model(model: ReservationModel) -> Reservation:
-    return Reservation(
-        id=model.id,
-        request_id=model.request_id,
-        owner_id=model.owner_id,
-        server_id=model.server_id,
-        title=model.title,
-        start_at=_as_utc(model.start_at),
-        end_at=_as_utc(model.end_at),
-        cpu_cores=model.cpu_cores,
-        memory_gb=model.memory_gb,
-        gpu_count=model.gpu_count,
-        gpu_ids=tuple(model.gpu_ids) if model.gpu_ids is not None else None,
-        status=ReservationStatus(model.status),
-        source=ReservationSource(model.source),
         created_at=_as_utc(model.created_at),
         updated_at=_as_utc(model.updated_at),
     )
@@ -190,131 +138,6 @@ class ServerRepository:
             select(ManagedServerModel).order_by(ManagedServerModel.key)
         ).all()
         return [_server_from_model(model) for model in models]
-
-
-class RequestRepository:
-    def __init__(self, session: Session) -> None:
-        self._session = session
-
-    def get(self, request_id: UUID) -> TaskRequest | None:
-        model = self._session.get(TaskRequestModel, request_id)
-        return _request_from_model(model) if model is not None else None
-
-    def add(self, task_request: TaskRequest) -> None:
-        self._session.add(
-            TaskRequestModel(
-                id=task_request.id,
-                title=task_request.title,
-                requester_id=task_request.requester_id,
-                project=task_request.project,
-                preferred_server_id=task_request.preferred_server_id,
-                planned_start=task_request.planned_start,
-                planned_duration_minutes=task_request.planned_duration_minutes,
-                requested_cpu_cores=task_request.requested_cpu_cores,
-                requested_memory_gb=task_request.requested_memory_gb,
-                requested_gpu_count=task_request.requested_gpu_count,
-                preferred_gpu_ids=(
-                    list(task_request.preferred_gpu_ids)
-                    if task_request.preferred_gpu_ids is not None
-                    else None
-                ),
-                note=task_request.note,
-                status=task_request.status.value,
-                status_changed_by=task_request.status_changed_by,
-                created_at=task_request.created_at,
-                updated_at=task_request.updated_at,
-            )
-        )
-
-    def save(self, task_request: TaskRequest) -> None:
-        model = self._session.get(TaskRequestModel, task_request.id)
-        if model is None:
-            raise KeyError(f"Request {task_request.id} does not exist")
-        model.title = task_request.title
-        model.project = task_request.project
-        model.preferred_server_id = task_request.preferred_server_id
-        model.planned_start = task_request.planned_start
-        model.planned_duration_minutes = task_request.planned_duration_minutes
-        model.requested_cpu_cores = task_request.requested_cpu_cores
-        model.requested_memory_gb = task_request.requested_memory_gb
-        model.requested_gpu_count = task_request.requested_gpu_count
-        model.preferred_gpu_ids = (
-            list(task_request.preferred_gpu_ids)
-            if task_request.preferred_gpu_ids is not None
-            else None
-        )
-        model.note = task_request.note
-        model.status = task_request.status.value
-        model.status_changed_by = task_request.status_changed_by
-        model.updated_at = task_request.updated_at
-
-    def list_for_user(self, user_id: UUID) -> list[TaskRequest]:
-        models = self._session.scalars(
-            select(TaskRequestModel)
-            .where(TaskRequestModel.requester_id == user_id)
-            .order_by(TaskRequestModel.created_at, TaskRequestModel.id)
-        ).all()
-        return [_request_from_model(model) for model in models]
-
-    def list_all(self) -> list[TaskRequest]:
-        models = self._session.scalars(
-            select(TaskRequestModel).order_by(TaskRequestModel.created_at, TaskRequestModel.id)
-        ).all()
-        return [_request_from_model(model) for model in models]
-
-
-class ReservationRepository:
-    def __init__(self, session: Session) -> None:
-        self._session = session
-
-    def get_by_request_id(self, request_id: UUID) -> Reservation | None:
-        model = self._session.scalar(
-            select(ReservationModel).where(ReservationModel.request_id == request_id)
-        )
-        return _reservation_from_model(model) if model is not None else None
-
-    def add(self, reservation: Reservation) -> None:
-        self._session.add(
-            ReservationModel(
-                id=reservation.id,
-                request_id=reservation.request_id,
-                owner_id=reservation.owner_id,
-                server_id=reservation.server_id,
-                title=reservation.title,
-                start_at=reservation.start_at,
-                end_at=reservation.end_at,
-                cpu_cores=reservation.cpu_cores,
-                memory_gb=reservation.memory_gb,
-                gpu_count=reservation.gpu_count,
-                gpu_ids=list(reservation.gpu_ids) if reservation.gpu_ids is not None else None,
-                status=reservation.status.value,
-                source=reservation.source.value,
-                created_at=reservation.created_at,
-                updated_at=reservation.updated_at,
-            )
-        )
-
-    def list_for_server(
-        self, server_id: UUID, start: datetime, end: datetime
-    ) -> list[Reservation]:
-        models = self._session.scalars(
-            select(ReservationModel)
-            .where(
-                ReservationModel.server_id == server_id,
-                ReservationModel.start_at < end,
-                ReservationModel.end_at > start,
-            )
-            .order_by(ReservationModel.start_at, ReservationModel.id)
-        ).all()
-        return [_reservation_from_model(model) for model in models]
-
-    def list_window(self, start: datetime, end: datetime) -> list[Reservation]:
-        models = self._session.scalars(
-            select(ReservationModel)
-            .where(ReservationModel.start_at < end, ReservationModel.end_at > start)
-            .order_by(ReservationModel.start_at, ReservationModel.id)
-        ).all()
-        return [_reservation_from_model(model) for model in models]
 
 
 class AuditRepository:

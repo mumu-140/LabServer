@@ -5,30 +5,16 @@ from uuid import UUID, uuid4
 import pytest
 from alembic import command
 from alembic.config import Config
-from labserver_contracts.common import (
-    ReservationSource,
-    ReservationStatus,
-    TaskRequestStatus,
-    UserRole,
-)
-from labserver_core.domain.entities import (
-    ManagedServer,
-    PlanEntry,
-    Reservation,
-    ServerCapacity,
-    TaskRequest,
-    User,
-)
+from labserver_contracts.common import UserRole
+from labserver_core.domain.entities import ManagedServer, PlanEntry, ServerCapacity, User
 from labserver_core.persistence.database import create_engine_and_session_factory
 from labserver_core.persistence.repositories import (
     PlanRepository,
-    RequestRepository,
-    ReservationRepository,
     ServerRepository,
     UserRepository,
 )
 from labserver_core.persistence.unit_of_work import SqlAlchemyUnitOfWork
-from sqlalchemy import MetaData, Table, create_engine, inspect
+from sqlalchemy import MetaData, Table, create_engine, inspect, text
 from sqlalchemy.exc import IntegrityError
 
 CORE_DIR = Path(__file__).resolve().parents[2]
@@ -125,124 +111,116 @@ def test_sqlite_foreign_keys_are_enforced_after_migration(tmp_path: Path) -> Non
         )
 
 
+def iso(moment: datetime) -> str:
+    return moment.strftime("%Y-%m-%d %H:%M:%S.%f+00:00")
+
+
+def seed_m1_data(session_factory: object) -> None:
+    user_hex = "00000000000000000000000000000201"
+    server_hex = "00000000000000000000000000000301"
+    submitted_hex = "00000000000000000000000000000401"
+    draft_hex = "00000000000000000000000000000402"
+    planned_hex = "00000000000000000000000000000501"
+    cancelled_hex = "00000000000000000000000000000502"
+    cancelled_at = NOW + timedelta(hours=1)
+
+    with session_factory() as session:  # type: ignore[attr-defined]
+        session.execute(
+            text(
+                "INSERT INTO users (id, username, display_name, role, enabled,"
+                " created_at, updated_at) VALUES (:id, 'alice', 'Alice', 'member', 1,"
+                " :now, :now)"
+            ),
+            {"id": user_hex, "now": iso(NOW)},
+        )
+        session.execute(
+            text(
+                "INSERT INTO managed_servers (id, key, display_name, enabled,"
+                " cpu_cores, memory_gb, gpu_count, created_at, updated_at)"
+                " VALUES (:id, 'fwq10', 'fwq10', 1, 64, 256.0, 4, :now, :now)"
+            ),
+            {"id": server_hex, "now": iso(NOW)},
+        )
+        for request_id, status_value in ((submitted_hex, "submitted"), (draft_hex, "draft")):
+            session.execute(
+                text(
+                    "INSERT INTO task_requests (id, title, requester_id, project,"
+                    " preferred_server_id, planned_start, planned_duration_minutes,"
+                    " requested_cpu_cores, requested_memory_gb, requested_gpu_count,"
+                    " preferred_gpu_ids, note, status, status_changed_by, created_at,"
+                    " updated_at) VALUES (:id, 'Poplar assembly', :user, 'Populus',"
+                    " :server, :planned_start, 120, 32, 128.0, 2, '[0, 1]',"
+                    " 'bring cables', :status, NULL, :now, :now)"
+                ),
+                {
+                    "id": request_id,
+                    "user": user_hex,
+                    "server": server_hex,
+                    "planned_start": iso(START),
+                    "status": status_value,
+                    "now": iso(NOW),
+                },
+            )
+        session.execute(
+            text(
+                "INSERT INTO reservations (id, request_id, owner_id, server_id, title,"
+                " start_at, end_at, cpu_cores, memory_gb, gpu_count, gpu_ids, status,"
+                " source, created_at, updated_at) VALUES (:id, :request, :user,"
+                " :server, 'Poplar assembly', :start_at, :end_at, 32, 128.0, 2,"
+                " '[0, 1]', 'planned', 'request', :now, :now)"
+            ),
+            {
+                "id": planned_hex,
+                "request": submitted_hex,
+                "user": user_hex,
+                "server": server_hex,
+                "start_at": iso(START),
+                "end_at": iso(START + timedelta(minutes=120)),
+                "now": iso(NOW),
+            },
+        )
+        session.execute(
+            text(
+                "INSERT INTO reservations (id, request_id, owner_id, server_id, title,"
+                " start_at, end_at, cpu_cores, memory_gb, gpu_count, gpu_ids, status,"
+                " source, created_at, updated_at) VALUES (:id, NULL, :user, :server,"
+                " 'Cancelled job', :start_at, :end_at, 4, 8.0, 1, '[2]', 'cancelled',"
+                " 'admin', :now, :cancelled_at)"
+            ),
+            {
+                "id": cancelled_hex,
+                "user": user_hex,
+                "server": server_hex,
+                "start_at": iso(START + timedelta(hours=4)),
+                "end_at": iso(START + timedelta(hours=6)),
+                "now": iso(NOW),
+                "cancelled_at": iso(cancelled_at),
+            },
+        )
+        session.commit()
+    return UUID(int=int(user_hex, 16)), UUID(int=int(server_hex, 16)), cancelled_at
+
+
 def test_migrated_reservations_become_plan_entries(tmp_path: Path) -> None:
     database_url = f"sqlite:///{tmp_path / 'migrate.sqlite'}"
     upgrade_database(database_url, revision="0001_initial_core")
     _, session_factory = create_engine_and_session_factory(database_url)
 
-    user = User(
-        UUID("00000000-0000-0000-0000-000000000201"),
-        "alice",
-        "Alice",
-        UserRole.MEMBER,
-        True,
-        NOW,
-        NOW,
-    )
-    server = ManagedServer(
-        UUID("00000000-0000-0000-0000-000000000301"),
-        "fwq10",
-        "fwq10",
-        True,
-        ServerCapacity(cpu_cores=64, memory_gb=256.0, gpu_count=4),
-        NOW,
-        NOW,
-    )
-    task_request = TaskRequest(
-        UUID("00000000-0000-0000-0000-000000000401"),
-        requester_id=user.id,
-        title="Poplar assembly",
-        project="Populus",
-        preferred_server_id=server.id,
-        planned_start=START,
-        planned_duration_minutes=120,
-        requested_cpu_cores=32,
-        requested_memory_gb=128.0,
-        requested_gpu_count=2,
-        preferred_gpu_ids=(0, 1),
-        note="bring cables",
-        status=TaskRequestStatus.SUBMITTED,
-        created_at=NOW,
-        updated_at=NOW,
-    )
-    cancelled_at = NOW + timedelta(hours=1)
-    planned_reservation = Reservation(
-        UUID("00000000-0000-0000-0000-000000000501"),
-        request_id=task_request.id,
-        owner_id=user.id,
-        server_id=server.id,
-        title="Poplar assembly",
-        start_at=START,
-        end_at=START + timedelta(minutes=120),
-        cpu_cores=32,
-        memory_gb=128.0,
-        gpu_count=2,
-        gpu_ids=(0, 1),
-        status=ReservationStatus.PLANNED,
-        source=ReservationSource.REQUEST,
-        created_at=NOW,
-        updated_at=NOW,
-    )
-    cancelled_reservation = Reservation(
-        UUID("00000000-0000-0000-0000-000000000502"),
-        request_id=None,
-        owner_id=user.id,
-        server_id=server.id,
-        title="Cancelled job",
-        start_at=START + timedelta(hours=4),
-        end_at=START + timedelta(hours=6),
-        cpu_cores=4,
-        memory_gb=8.0,
-        gpu_count=1,
-        gpu_ids=(2,),
-        status=ReservationStatus.CANCELLED,
-        source=ReservationSource.ADMIN,
-        created_at=NOW,
-        updated_at=cancelled_at,
-    )
-    draft_request = TaskRequest(
-        UUID("00000000-0000-0000-0000-000000000402"),
-        requester_id=user.id,
-        title="Draft request",
-        project=None,
-        preferred_server_id=server.id,
-        planned_start=START + timedelta(hours=8),
-        planned_duration_minutes=60,
-        requested_cpu_cores=1,
-        requested_memory_gb=None,
-        requested_gpu_count=0,
-        preferred_gpu_ids=None,
-        note=None,
-        status=TaskRequestStatus.DRAFT,
-        created_at=NOW,
-        updated_at=NOW,
-    )
-
-    with session_factory() as session:
-        users = UserRepository(session)
-        servers = ServerRepository(session)
-        requests = RequestRepository(session)
-        reservations = ReservationRepository(session)
-        users.add(user)
-        servers.add(server)
-        session.commit()
-        requests.add(task_request)
-        requests.add(draft_request)
-        session.commit()
-        reservations.add(planned_reservation)
-        reservations.add(cancelled_reservation)
-        session.commit()
-
+    seed_m1_data(session_factory)
     upgrade_database(database_url)
 
+    user_id = UUID("00000000-0000-0000-0000-000000000201")
+    server_id = UUID("00000000-0000-0000-0000-000000000301")
+    cancelled_at = NOW + timedelta(hours=1)
+
     expected_planned = PlanEntry(
-        planned_reservation.id,
-        owner_id=user.id,
-        server_id=server.id,
+        UUID("00000000-0000-0000-0000-000000000501"),
+        owner_id=user_id,
+        server_id=server_id,
         title="Poplar assembly",
         project="Populus",
-        start_at=planned_reservation.start_at,
-        end_at=planned_reservation.end_at,
+        start_at=START,
+        end_at=START + timedelta(minutes=120),
         cpu_cores=32,
         memory_gb=128.0,
         gpu_count=2,
@@ -253,13 +231,13 @@ def test_migrated_reservations_become_plan_entries(tmp_path: Path) -> None:
         updated_at=NOW,
     )
     expected_cancelled = PlanEntry(
-        cancelled_reservation.id,
-        owner_id=user.id,
-        server_id=server.id,
+        UUID("00000000-0000-0000-0000-000000000502"),
+        owner_id=user_id,
+        server_id=server_id,
         title="Cancelled job",
         project=None,
-        start_at=cancelled_reservation.start_at,
-        end_at=cancelled_reservation.end_at,
+        start_at=START + timedelta(hours=4),
+        end_at=START + timedelta(hours=6),
         cpu_cores=4,
         memory_gb=8.0,
         gpu_count=1,
@@ -272,8 +250,8 @@ def test_migrated_reservations_become_plan_entries(tmp_path: Path) -> None:
 
     with session_factory() as session:
         plans = PlanRepository(session)
-        assert plans.get(planned_reservation.id) == expected_planned
-        assert plans.get(cancelled_reservation.id) == expected_cancelled
+        assert plans.get(expected_planned.id) == expected_planned
+        assert plans.get(expected_cancelled.id) == expected_cancelled
         assert plans.list(include_cancelled=True) == [expected_planned, expected_cancelled]
 
     engine = create_engine(database_url)
