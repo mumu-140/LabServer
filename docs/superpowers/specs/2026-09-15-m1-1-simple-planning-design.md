@@ -1,7 +1,7 @@
 # M1.1 Simple Planning Design
 
 Date: 2026-09-15
-Status: Draft for user review
+Status: Approved
 
 ## 1. Purpose
 
