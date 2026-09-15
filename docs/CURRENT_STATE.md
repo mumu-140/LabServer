@@ -50,7 +50,7 @@ Fresh local verification of the M1 tree:
 - fresh empty SQLite database upgraded successfully to Alembic head;
 - expected tables present: `alembic_version`, `audit_events`, `managed_servers`, `reservations`, `task_requests`, `users`;
 - API smoke suite: 5 passed;
-- full suite: 82 passed;
+- full suite: 83 passed;
 - Ruff: all checks passed;
 - mypy: success across 36 source files.
 
