@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.13"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: uv lock
+      - run: uv sync --all-packages --dev --locked
+      - run: uv run ruff check .
+      - run: uv run mypy services/core/src packages/contracts/src
+      - run: uv run pytest -q
+      - name: Export dependency wheel list
+        run: uv export --all-packages --all-groups --no-emit-workspace --no-hashes -o requirements-bootstrap.txt
+      - name: Download offline wheelhouse
+        run: |
+          python -m pip download -r requirements-bootstrap.txt -d wheelhouse
+          python -m pip download hatchling -d wheelhouse
+      - uses: actions/upload-artifact@v4
+        with:
+          name: task1-bootstrap-deps
+          path: |
+            uv.lock
+            wheelhouse/
+          if-no-files-found: error

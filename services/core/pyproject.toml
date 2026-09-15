@@ -1,0 +1,19 @@
+[project]
+name = "labserver-core"
+version = "0.1.0"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+  "alembic==1.20.0",
+  "fastapi==0.141.1",
+  "labserver-contracts",
+  "pydantic==2.13.5",
+  "sqlalchemy==2.0.52",
+  "uvicorn==0.52.4",
+]
+
+[tool.uv.sources]
+labserver-contracts = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
