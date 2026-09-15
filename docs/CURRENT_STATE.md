@@ -4,13 +4,15 @@ Last updated: 2026-09-15
 
 ## Status
 
-LabServer is in the architecture/design phase. No production code has been implemented or deployed.
+LabServer architecture has been reviewed and approved. No production code has been implemented or deployed.
 
 ## Current branch
 
-Design work is being prepared on:
+The approved architecture is on:
 
 `design/initial-architecture`
+
+and is being merged into `main` through PR #1.
 
 ## Current baseline
 
@@ -19,8 +21,8 @@ Completed:
 - repository-wide `AGENTS.md` guardrails defined;
 - four-harness architecture defined (`web`, `core`, `agent`, `ops`);
 - stable project decisions recorded in `docs/PROJECT_KNOWLEDGE.md`;
-- initial architecture spec added under `docs/superpowers/specs/`;
-- draft design PR opened for review.
+- initial architecture spec added at `docs/superpowers/specs/2026-09-15-labserver-design.md`;
+- architecture reviewed and approved on 2026-09-15.
 
 Not yet implemented:
 - web application;
@@ -34,14 +36,13 @@ Not yet implemented:
 
 ## Next gate
 
-The next step is human review of the initial design spec. Implementation planning must not begin until the architecture/spec is approved.
+Prepare the Milestone 1 implementation plan for foundation + core planning. Implementation starts only from the reviewed plan and must preserve the approved harness boundaries.
 
 ## Active design references
 
 - `docs/HARNESS_ARCHITECTURE.md`
 - `docs/PROJECT_KNOWLEDGE.md`
 - `docs/superpowers/specs/2026-09-15-labserver-design.md`
-- GitHub PR #1
 
 ## Important constraints
 
