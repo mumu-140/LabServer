@@ -51,11 +51,20 @@ class AuditRepositoryPort(Protocol):
 
 
 class UnitOfWork(Protocol):
-    users: UserRepositoryPort
-    servers: ServerRepositoryPort
-    requests: RequestRepositoryPort
-    reservations: ReservationRepositoryPort
-    audits: AuditRepositoryPort
+    @property
+    def users(self) -> UserRepositoryPort: ...
+
+    @property
+    def servers(self) -> ServerRepositoryPort: ...
+
+    @property
+    def requests(self) -> RequestRepositoryPort: ...
+
+    @property
+    def reservations(self) -> ReservationRepositoryPort: ...
+
+    @property
+    def audits(self) -> AuditRepositoryPort: ...
 
     def __enter__(self) -> Self: ...
     def __exit__(
