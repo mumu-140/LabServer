@@ -13,7 +13,7 @@ The initial target is a small set of Linux compute servers on the same private n
 
 ## Project status
 
-**Architecture approved; Milestone 1 central planning core is under implementation. No production deployment yet.**
+**Architecture approved; Milestone 1 central planning core is implemented on PR #3 and under final review. No production deployment yet.**
 
 The design baseline is maintained under `docs/`. Start with:
 
