@@ -4,7 +4,7 @@
 
 **Goal:** Deliver a testable central LabServer core that stores users, logical servers, task requests, reservations, performs request lifecycle/approval and advisory resource-conflict evaluation, and exposes versioned HTTP APIs without requiring any lab host, GPU, Beszel instance, or private-network access.
 
-**Architecture:** Use a small Python monorepo workspace with an independent contracts package and a FastAPI core service. Business rules live in framework-independent domain/application modules; SQLAlchemy/Alembic are persistence adapters; HTTP routes are thin adapters. Authentication transport is intentionally not implemented in Milestone 1: API authorization consumes a `CurrentActor` dependency that is **default-deny in production** and overridden in tests, so no temporary insecure header-based auth is introduced.
+**Architecture:** Use a small Python monorepo workspace with an independent contracts package and a FastAPI core service. Business rules live in framework-independent domain/application modules; SQLAlchemy/Alembic are persistence adapters; HTTP routes are thin adapters. Human authentication transport is intentionally deferred: Milestone 1 exposes a `CurrentActor` authorization boundary that is **default-deny** unless a trusted adapter/test override supplies an actor. No temporary header-based admin bypass is allowed.
 
 **Tech Stack:** Python 3.13; uv workspace/lockfile; FastAPI 0.141.1; Pydantic 2.13.5; SQLAlchemy 2.0.52; Alembic 1.20.0; Uvicorn 0.52.4; HTTPX 0.28.1; SQLite; pytest 9.1.1; Ruff 0.16.7; mypy 2.3.1; GitHub Actions.
 
@@ -17,16 +17,16 @@
 - Server identity is a stable logical key such as `fwq10`; IP addresses are runtime configuration and are not database identity.
 - Core tests must run without network access, Beszel, Linux process access, or a GPU.
 - SQLite is the Milestone 1 database; foreign keys are enabled and migrations exist from the first schema.
-- Timestamps are stored as UTC-aware datetimes.
+- Timestamps are timezone-aware and normalized to UTC.
 - Task request and reservation are separate persisted concepts.
-- Approval must create a reservation transactionally and be idempotent.
+- Approval creates a reservation in one transaction and is idempotent.
 - Scheduling intervals are half-open: `[start, end)`.
 - Conflicts are advisory in V1; conflict detection never dispatches, blocks, kills, or moves workloads.
-- Business rules belong in `services/core/src/labserver_core/domain` or `application`, not in routes or ORM models.
+- Business rules belong in `services/core/src/labserver_core/domain` or `application`, never in routes or ORM models.
 - Shared API schemas/enums belong in `packages/contracts`; contracts contain no database access or service logic.
 - Shared enums have one source of truth in `labserver_contracts.common`; core imports them and does not redefine them.
-- HTTP authorization must default to deny until a real human-auth adapter is implemented in a later milestone.
-- Python runtime baseline is 3.13. Do not adopt prerelease dependencies (for example SQLAlchemy 2.1 RC or HTTPX 1.0 dev) in this milestone.
+- HTTP authorization defaults to deny until a real human-auth adapter is implemented.
+- Python runtime baseline is 3.13; prerelease dependencies are forbidden in this milestone.
 
 ---
 
@@ -37,101 +37,82 @@ LabServer/
 ├── pyproject.toml
 ├── uv.lock
 ├── .python-version
-├── .github/
-│   └── workflows/
-│       └── ci.yml
-├── packages/
-│   └── contracts/
-│       ├── pyproject.toml
-│       ├── src/labserver_contracts/
-│       │   ├── __init__.py
-│       │   ├── common.py
-│       │   ├── users.py
-│       │   ├── servers.py
-│       │   ├── requests.py
-│       │   └── reservations.py
-│       └── tests/
-│           └── test_serialization.py
-├── services/
-│   └── core/
-│       ├── pyproject.toml
-│       ├── alembic.ini
-│       ├── migrations/
-│       │   ├── env.py
-│       │   └── versions/
-│       │       └── 0001_initial_core.py
-│       ├── src/labserver_core/
-│       │   ├── __init__.py
-│       │   ├── app.py
-│       │   ├── config.py
-│       │   ├── api/
-│       │   │   ├── dependencies.py
-│       │   │   ├── errors.py
-│       │   │   ├── router.py
-│       │   │   └── routes/
-│       │   │       ├── health.py
-│       │   │       ├── users.py
-│       │   │       ├── servers.py
-│       │   │       ├── requests.py
-│       │   │       └── reservations.py
-│       │   ├── application/
-│       │   │   ├── actors.py
-│       │   │   ├── ports.py
-│       │   │   ├── request_service.py
-│       │   │   ├── reservation_service.py
-│       │   │   └── server_service.py
-│       │   ├── domain/
-│       │   │   ├── entities.py
-│       │   │   ├── errors.py
-│       │   │   ├── transitions.py
-│       │   │   └── conflicts.py
-│       │   └── persistence/
-│       │       ├── database.py
-│       │       ├── models.py
-│       │       ├── repositories.py
-│       │       └── unit_of_work.py
-│       └── tests/
-│           ├── conftest.py
-│           ├── unit/
-│           │   ├── test_authorization.py
-│           │   ├── test_request_service.py
-│           │   ├── test_transitions.py
-│           │   └── test_conflicts.py
-│           ├── persistence/
-│           │   ├── test_approval_transaction.py
-│           │   └── test_migrations.py
-│           └── api/
-│               ├── test_health.py
-│               ├── test_servers.py
-│               ├── test_requests.py
-│               └── test_approval.py
-└── docs/
-    └── api/
-        └── core-v1.md
+├── .github/workflows/ci.yml
+├── packages/contracts/
+│   ├── pyproject.toml
+│   ├── src/labserver_contracts/
+│   │   ├── __init__.py
+│   │   ├── common.py
+│   │   ├── users.py
+│   │   ├── servers.py
+│   │   ├── requests.py
+│   │   └── reservations.py
+│   └── tests/
+│       ├── test_imports.py
+│       └── test_serialization.py
+├── services/core/
+│   ├── pyproject.toml
+│   ├── alembic.ini
+│   ├── migrations/
+│   │   ├── env.py
+│   │   └── versions/0001_initial_core.py
+│   ├── src/labserver_core/
+│   │   ├── __init__.py
+│   │   ├── app.py
+│   │   ├── config.py
+│   │   ├── api/
+│   │   │   ├── dependencies.py
+│   │   │   ├── errors.py
+│   │   │   ├── router.py
+│   │   │   └── routes/{health,users,servers,requests,reservations}.py
+│   │   ├── application/
+│   │   │   ├── actors.py
+│   │   │   ├── ports.py
+│   │   │   ├── user_service.py
+│   │   │   ├── server_service.py
+│   │   │   ├── request_service.py
+│   │   │   └── reservation_service.py
+│   │   ├── domain/
+│   │   │   ├── entities.py
+│   │   │   ├── errors.py
+│   │   │   ├── transitions.py
+│   │   │   └── conflicts.py
+│   │   └── persistence/
+│   │       ├── database.py
+│   │       ├── models.py
+│   │       ├── repositories.py
+│   │       └── unit_of_work.py
+│   └── tests/
+│       ├── conftest.py
+│       ├── test_architecture_boundaries.py
+│       ├── unit/{test_authorization,test_request_service,test_transitions,test_conflicts}.py
+│       ├── persistence/{test_approval_transaction,test_migrations}.py
+│       └── api/{test_health,test_users,test_servers,test_requests,test_approval}.py
+└── docs/api/core-v1.md
 ```
 
 No `apps/web`, `services/agent`, Beszel adapter, SSE endpoint, or deployment-to-real-host file is added in Milestone 1.
 
 ---
 
-### Task 1: Establish the Python workspace, dependency boundaries, and CI shell
+### Task 1: Establish the Python workspace and a green CI baseline
 
 **Files:**
 - Create: `pyproject.toml`
 - Create: `.python-version`
 - Create: `packages/contracts/pyproject.toml`
 - Create: `packages/contracts/src/labserver_contracts/__init__.py`
+- Create: `packages/contracts/tests/test_imports.py`
 - Create: `services/core/pyproject.toml`
 - Create: `services/core/src/labserver_core/__init__.py`
 - Create: `.github/workflows/ci.yml`
 - Generate/commit: `uv.lock`
 
 **Interfaces:**
-- Produces package import `labserver_contracts`.
-- Produces package import `labserver_core`.
-- Produces one workspace-level command surface: `uv run pytest`, `uv run ruff check .`, `uv run mypy ...`.
+- Produces importable packages `labserver_contracts` and `labserver_core`.
+- Produces workspace commands `uv run pytest`, `uv run ruff check .`, and `uv run mypy ...`.
 
-- [ ] **Step 1: Add workspace configuration with exact dependency lines**
+- [ ] **Step 1: Add exact workspace configuration**
 
 Root `pyproject.toml`:
 
@@ -212,42 +193,34 @@ build-backend = "hatchling.build"
 
 `.python-version` contains exactly `3.13`.
 
-- [ ] **Step 2: Generate the lockfile and verify imports**
+- [ ] **Step 2: Add a real smoke test so the first CI commit is green**
 
-Run:
+`packages/contracts/tests/test_imports.py`:
+
+```python
+def test_workspace_packages_import() -> None:
+    import labserver_contracts
+    import labserver_core
+
+    assert labserver_contracts.__name__ == "labserver_contracts"
+    assert labserver_core.__name__ == "labserver_core"
+```
+
+- [ ] **Step 3: Generate lockfile and run the baseline**
 
 ```bash
 uv lock
 uv sync --all-packages --dev --locked
-uv run python -c "import labserver_contracts, labserver_core"
-```
-
-Expected: all commands exit `0`.
-
-- [ ] **Step 3: Add CI with no private-network dependency**
-
-`.github/workflows/ci.yml` must run on `ubuntu-24.04`, Python 3.13, and execute:
-
-```yaml
-- run: uv sync --all-packages --dev --locked
-- run: uv run ruff check .
-- run: uv run mypy services/core/src packages/contracts/src
-- run: uv run pytest -q
-```
-
-Do not define lab IPs, SSH secrets, VPN setup, or service containers.
-
-- [ ] **Step 4: Run the empty-suite/tooling checks**
-
-Run:
-
-```bash
 uv run ruff check .
 uv run mypy services/core/src packages/contracts/src
 uv run pytest -q
 ```
 
-Expected: tooling succeeds; pytest may report no tests only until Task 2 adds the first tests.
+Expected: all commands exit `0`; one smoke test passes.
+
+- [ ] **Step 4: Add CI**
+
+`.github/workflows/ci.yml` runs on `ubuntu-24.04`, Python 3.13 and executes the four locked commands above. It must not define lab IPs, SSH secrets, VPN setup, or service containers.
 
 - [ ] **Step 5: Commit**
 
@@ -258,7 +231,7 @@ git commit -m "chore: establish Python workspace and CI"
 
 ---
 
-### Task 2: Define stable shared contracts and enums
+### Task 2: Define shared contracts and the one canonical enum set
 
 **Files:**
 - Create: `packages/contracts/src/labserver_contracts/common.py`
@@ -270,74 +243,57 @@ git commit -m "chore: establish Python workspace and CI"
 - Create: `packages/contracts/tests/test_serialization.py`
 
 **Interfaces:**
-- `labserver_contracts.common` is the single source of truth for `UserRole`, `TaskRequestStatus`, `ReservationStatus`, `ReservationSource`, `ConflictCertainty`, and `ConflictResource`.
-- Produces API DTOs: `UserRead`, `ServerRead`, `TaskRequestCreate`, `TaskRequestRead`, `ReservationRead`, `ConflictRead`, `ErrorResponse`.
-- Core domain/application code imports shared enums from `labserver_contracts.common`; it never redeclares them.
-- UUIDs serialize as strings and datetimes must be timezone-aware UTC values.
+- `labserver_contracts.common`: `UserRole`, `TaskRequestStatus`, `ReservationStatus`, `ReservationSource`, `ConflictCertainty`, `ConflictResource`, `ErrorResponse`.
+- User DTOs: `UserCreate`, `UserRead`.
+- Server DTOs: `ServerCreate`, `ServerUpdate`, `ServerRead`.
+- Request DTOs: `TaskRequestCreate`, `TaskRequestUpdate`, `TaskRequestRead`.
+- Reservation DTOs: `ReservationRead`, `ConflictRead`.
+- UUIDs serialize as strings; datetimes are timezone-aware and normalized to UTC.
 
-- [ ] **Step 1: Write serialization tests first**
-
-Create tests covering:
+- [ ] **Step 1: Write failing serialization/validation tests**
 
 ```python
 from datetime import timedelta
 
 
-def test_task_request_contract_round_trip() -> None:
-    payload = {
-        "title": "Poplar assembly",
-        "project": "Populus",
-        "preferred_server_id": "00000000-0000-0000-0000-000000000010",
-        "planned_start": "2026-09-18T00:00:00Z",
-        "planned_duration_minutes": 2880,
-        "requested_cpu_cores": 32,
-        "requested_memory_gb": 128.0,
-        "requested_gpu_count": 2,
-        "preferred_gpu_ids": [0, 1],
-        "note": "HiFi assembly",
-    }
-    model = TaskRequestCreate.model_validate(payload)
+def test_task_request_contract_normalizes_utc() -> None:
+    model = TaskRequestCreate.model_validate(
+        {
+            "title": "Poplar assembly",
+            "project": "Populus",
+            "preferred_server_id": "00000000-0000-0000-0000-000000000010",
+            "planned_start": "2026-09-18T00:00:00Z",
+            "planned_duration_minutes": 2880,
+            "requested_cpu_cores": 32,
+            "requested_memory_gb": 128.0,
+            "requested_gpu_count": 2,
+            "preferred_gpu_ids": [0, 1],
+            "note": "HiFi assembly",
+        }
+    )
     assert model.preferred_gpu_ids == [0, 1]
     assert model.planned_start.utcoffset() == timedelta(0)
 ```
 
-Also test duplicate GPU IDs are rejected, naive datetimes are rejected, and negative CPU/GPU values are rejected by DTO validation.
+Also test rejection of duplicate/negative GPU IDs, negative resources, zero duration, naive datetimes, and explicit GPU IDs whose count differs from `requested_gpu_count`.
 
-- [ ] **Step 2: Run the contract test and verify failure**
-
-Run:
+- [ ] **Step 2: Verify failure**
 
 ```bash
 uv run pytest packages/contracts/tests/test_serialization.py -q
 ```
 
-Expected: FAIL because contract modules do not exist.
+- [ ] **Step 3: Implement DTOs**
 
-- [ ] **Step 3: Implement the Pydantic DTOs and shared string enums**
+Use `ConfigDict(extra="forbid")` on write DTOs. No contract may contain a real/private endpoint field or full process command line.
 
-Use `ConfigDict(extra="forbid")` for request/write DTOs. Do not include server IP fields or full process command lines in any shared contract.
-
-`TaskRequestCreate` must enforce:
-- non-empty trimmed `title`;
-- timezone-aware `planned_start`, normalized to UTC;
-- `planned_duration_minutes > 0`;
-- `requested_cpu_cores >= 0`;
-- `requested_gpu_count >= 0`;
-- `requested_memory_gb is None or >= 0`;
-- unique non-negative `preferred_gpu_ids`;
-- if explicit GPU IDs are supplied, `requested_gpu_count == len(preferred_gpu_ids)`.
-
-- [ ] **Step 4: Run contract tests**
-
-Run:
+- [ ] **Step 4: Verify**
 
 ```bash
-uv run pytest packages/contracts/tests/test_serialization.py -q
+uv run pytest packages/contracts/tests -q
 uv run ruff check packages/contracts
 uv run mypy packages/contracts/src
 ```
-
-Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
@@ -348,7 +304,7 @@ git commit -m "feat: define core API contracts"
 
 ---
 
-### Task 3: Implement framework-independent domain entities and request transitions
+### Task 3: Implement pure domain entities and request lifecycle
 
 **Files:**
 - Create: `services/core/src/labserver_core/domain/entities.py`
@@ -357,14 +313,14 @@ git commit -m "feat: define core API contracts"
 - Create: `services/core/tests/unit/test_transitions.py`
 
 **Interfaces:**
-- Produces immutable/value-oriented entities: `User`, `ManagedServer`, `ServerCapacity`, `TaskRequest`, `Reservation`.
-- Imports lifecycle/role enums from `labserver_contracts.common`.
-- Produces `transition_request(request, target, actor_role) -> TaskRequest`.
-- Produces stable domain exceptions with `code`: `invalid_transition`, `forbidden`, `server_disabled`, `capacity_exceeded`, `not_found`, `validation_error`.
+- Entities: `User`, `ManagedServer`, `ServerCapacity`, `TaskRequest`, `Reservation`.
+- Shared enums imported from `labserver_contracts.common`.
+- Function: `transition_request(request, target, actor_role, *, server, allow_capacity_override=False) -> TaskRequest`.
+- Domain errors expose stable `code`: `invalid_transition`, `forbidden`, `server_disabled`, `capacity_exceeded`, `not_found`, `validation_error`.
 
-- [ ] **Step 1: Write failing state-machine tests**
+- [ ] **Step 1: Write failing transition tests**
 
-Cover exactly:
+Allowed:
 
 ```text
 draft -> submitted
@@ -374,7 +330,7 @@ draft -> cancelled
 submitted -> cancelled
 ```
 
-Reject at minimum:
+Forbidden at minimum:
 
 ```text
 approved -> submitted
@@ -384,56 +340,35 @@ member -> approve
 member -> reject
 ```
 
-Also test submit fails when selected server is disabled.
+Also test submit fails against a disabled server and fails when known capacity is exceeded unless an explicit admin override is supplied.
 
-- [ ] **Step 2: Verify tests fail**
-
-Run:
+- [ ] **Step 2: Verify failure**
 
 ```bash
 uv run pytest services/core/tests/unit/test_transitions.py -q
 ```
 
-Expected: FAIL because domain implementation does not exist.
+- [ ] **Step 3: Implement pure functions**
 
-- [ ] **Step 3: Implement pure transition functions**
+No FastAPI or SQLAlchemy imports. Time-dependent behavior receives `now` as an argument when needed; domain code does not read wall clock implicitly.
 
-Rules:
-- transition functions receive domain entities and actor role explicitly;
-- no SQLAlchemy imports;
-- no FastAPI imports;
-- no reading system time inside pure transition validation except through an injected `now` when needed;
-- approved/rejected transitions require `admin`;
-- submit validates enabled server and known capacity when capacity values are present;
-- capacity override is represented by an explicit boolean parameter available only to admin application service, not silently inferred.
-
-- [ ] **Step 4: Run unit tests and static checks**
+- [ ] **Step 4: Verify and commit**
 
 ```bash
 uv run pytest services/core/tests/unit/test_transitions.py -q
 uv run ruff check services/core/src/labserver_core/domain services/core/tests/unit
 uv run mypy services/core/src/labserver_core/domain
-```
-
-Expected: PASS.
-
-- [ ] **Step 5: Commit**
-
-```bash
 git add services/core/src/labserver_core/domain services/core/tests/unit/test_transitions.py
 git commit -m "feat: add request lifecycle domain model"
 ```
 
 ---
 
-### Task 4: Create SQLite persistence, initial migration, repositories, and unit-of-work boundary
+### Task 4: Add SQLite persistence, migrations, repositories, and unit of work
 
 **Files:**
 - Create: `services/core/src/labserver_core/config.py`
-- Create: `services/core/src/labserver_core/persistence/database.py`
-- Create: `services/core/src/labserver_core/persistence/models.py`
-- Create: `services/core/src/labserver_core/persistence/repositories.py`
-- Create: `services/core/src/labserver_core/persistence/unit_of_work.py`
+- Create: `services/core/src/labserver_core/persistence/{database,models,repositories,unit_of_work}.py`
 - Create: `services/core/alembic.ini`
 - Create: `services/core/migrations/env.py`
 - Create: `services/core/migrations/versions/0001_initial_core.py`
@@ -441,132 +376,97 @@ git commit -m "feat: add request lifecycle domain model"
 - Create: `services/core/tests/conftest.py`
 
 **Interfaces:**
-- Produces `create_engine_and_session_factory(database_url)`.
-- Produces repository protocols/implementations for users, servers, requests, reservations.
-- Produces `SqlAlchemyUnitOfWork` with one transaction around approval -> reservation creation.
+- `create_engine_and_session_factory(database_url)`.
+- `SqlAlchemyUnitOfWork` owns one SQLAlchemy Session/transaction.
+- Repositories return domain entities, never ORM rows.
 
-**Initial schema:**
+**Schema:**
 
-`users`
-- `id` UUID primary key
-- `username` unique
-- `display_name`
-- `role`
-- `enabled`
-- `created_at`, `updated_at`
+`users`: UUID PK, unique username, display_name, role, enabled, timestamps.
 
-`managed_servers`
-- `id` UUID primary key
-- `key` unique (logical key only)
-- `display_name`
-- `enabled`
-- `cpu_cores` nullable integer
-- `memory_gb` nullable real
-- `gpu_count` nullable integer
-- `created_at`, `updated_at`
+`managed_servers`: UUID PK, unique logical `key`, display_name, enabled, nullable `cpu_cores`, `memory_gb`, `gpu_count`, timestamps. **No IP column.**
 
-`task_requests`
-- fields from approved spec
-- `preferred_gpu_ids` JSON nullable
-- `status`
-- `status_changed_by` UUID nullable FK users
-- timestamps
+`task_requests`: approved-spec fields, JSON `preferred_gpu_ids`, status, nullable FK `status_changed_by`, timestamps.
 
-`reservations`
-- fields from approved spec
-- `request_id` nullable unique FK task_requests
-- `gpu_ids` JSON nullable
-- timestamps
+`reservations`: approved-spec fields, nullable unique FK `request_id`, JSON `gpu_ids`, timestamps.
 
-`audit_events`
-- `id` UUID primary key
-- `entity_type`
-- `entity_id` UUID
-- `action`
-- `actor_id` UUID nullable FK users
-- `occurred_at`
-- `details` JSON nullable
+`audit_events`: UUID PK, entity_type, entity_id, action, nullable actor FK, occurred_at, nullable JSON details.
 
-Do **not** store IP addresses in `managed_servers`.
+- [ ] **Step 1: Write failing migration tests**
 
-- [ ] **Step 1: Write migration tests first**
+Create a temporary SQLite DB, run `alembic upgrade head`, assert all five tables, assert `managed_servers` has no `ip`/`endpoint` column, and assert FK failure for a nonexistent request owner.
 
-Test creates a temporary SQLite database, runs `alembic upgrade head`, and asserts the five tables above exist. Add an FK test that inserting a request with a nonexistent `requester_id` fails.
-
-- [ ] **Step 2: Verify migration test fails**
+- [ ] **Step 2: Verify failure**
 
 ```bash
 uv run pytest services/core/tests/persistence/test_migrations.py -q
 ```
 
-Expected: FAIL because migration/configuration does not exist.
+- [ ] **Step 3: Implement DB setup**
 
-- [ ] **Step 3: Implement database setup with SQLite foreign keys**
-
-On every SQLite connection execute:
+Enable on every SQLite connection:
 
 ```sql
 PRAGMA foreign_keys=ON;
 ```
 
-Use SQLAlchemy 2.0 declarative mappings. Keep ORM models in `persistence/models.py`; do not return them from application services or API routes.
+Use SQLAlchemy 2.0 declarative models. `alembic.ini` must use a script location relative to its own directory so the root-level command works.
 
-- [ ] **Step 4: Implement repository mapping and unit of work**
-
-Repository methods return domain entities, not ORM rows. Required methods:
+- [ ] **Step 4: Implement repository API**
 
 ```python
 UserRepository.get(user_id: UUID) -> User | None
+UserRepository.add(user: User) -> None
+UserRepository.list_all() -> list[User]
+
 ServerRepository.get(server_id: UUID) -> ManagedServer | None
 ServerRepository.get_by_key(key: str) -> ManagedServer | None
+ServerRepository.add(server: ManagedServer) -> None
+ServerRepository.list_all() -> list[ManagedServer]
+
 RequestRepository.get(request_id: UUID) -> TaskRequest | None
 RequestRepository.add(request: TaskRequest) -> None
+RequestRepository.list_for_user(user_id: UUID) -> list[TaskRequest]
+RequestRepository.list_all() -> list[TaskRequest]
+
 ReservationRepository.get_by_request_id(request_id: UUID) -> Reservation | None
 ReservationRepository.list_for_server(server_id: UUID, start: datetime, end: datetime) -> list[Reservation]
+ReservationRepository.list_window(start: datetime, end: datetime) -> list[Reservation]
 ReservationRepository.add(reservation: Reservation) -> None
 ```
 
-- [ ] **Step 5: Run migration and repository tests**
+- [ ] **Step 5: Verify and commit**
 
 ```bash
 uv run pytest services/core/tests/persistence -q
 uv run ruff check services/core/src/labserver_core/persistence services/core/migrations
 uv run mypy services/core/src/labserver_core/persistence
-```
-
-Expected: PASS.
-
-- [ ] **Step 6: Commit**
-
-```bash
 git add services/core/alembic.ini services/core/migrations services/core/src/labserver_core/config.py services/core/src/labserver_core/persistence services/core/tests
 git commit -m "feat: add SQLite persistence and initial migration"
 ```
 
 ---
 
-### Task 5: Add actor authorization and logical user/server application services
+### Task 5: Add authorization plus user/server application services
 
 **Files:**
 - Create: `services/core/src/labserver_core/application/actors.py`
 - Create: `services/core/src/labserver_core/application/ports.py`
+- Create: `services/core/src/labserver_core/application/user_service.py`
 - Create: `services/core/src/labserver_core/application/server_service.py`
 - Create: `services/core/src/labserver_core/api/dependencies.py`
 - Create: `services/core/tests/unit/test_authorization.py`
 
 **Interfaces:**
-- Produces `CurrentActor(user_id: UUID, role: UserRole)`.
-- Produces `require_admin(actor)` and `require_self_or_admin(actor, owner_id)`.
-- Produces server methods `create_server`, `update_server`, `list_servers`.
-- Produces FastAPI dependency `get_current_actor()` that raises HTTP 401 by default until a later human-auth adapter replaces it.
+- `CurrentActor(user_id: UUID, role: UserRole)`.
+- `require_admin(actor)` and `require_self_or_admin(actor, owner_id)`.
+- `UserService.create_user/list_users` — admin only.
+- `ServerService.create_server/update_server/list_servers` — writes admin only; reads member/admin.
+- `get_current_actor()` raises HTTP 401 by default.
 
-- [ ] **Step 1: Write authorization tests**
+- [ ] **Step 1: Write failing authorization tests**
 
-Test:
-- member cannot create/disable a managed server;
-- admin can create/update a managed server;
-- member can act on own request but not another member's request;
-- disabled user actor is rejected by application boundary when loaded.
+Test admin/member rules, disabled actor rejection, member ownership boundaries, duplicate server logical-key error, and that server creation has no endpoint/IP input.
 
 - [ ] **Step 2: Verify failure**
 
@@ -574,28 +474,27 @@ Test:
 uv run pytest services/core/tests/unit/test_authorization.py -q
 ```
 
-- [ ] **Step 3: Implement default-deny actor boundary**
+- [ ] **Step 3: Implement default-deny boundary**
 
-Do not add `X-User`, `X-Admin`, hard-coded admin, or any other deployment-auth bypass. Tests use FastAPI `dependency_overrides` later.
+No `X-User`, `X-Admin`, hard-coded admin, dev superuser, or similar bypass. Later API tests use FastAPI `dependency_overrides` only.
 
-- [ ] **Step 4: Run tests and commit**
+- [ ] **Step 4: Verify and commit**
 
 ```bash
 uv run pytest services/core/tests/unit/test_authorization.py -q
 git add services/core/src/labserver_core/application services/core/src/labserver_core/api/dependencies.py services/core/tests/unit/test_authorization.py
-git commit -m "feat: add core authorization boundary"
+git commit -m "feat: add user server and authorization services"
 ```
 
 ---
 
-### Task 6: Implement the advisory conflict engine with segment-based capacity evaluation
+### Task 6: Implement the advisory conflict engine with a boundary sweep
 
 **Files:**
 - Create: `services/core/src/labserver_core/domain/conflicts.py`
 - Create: `services/core/tests/unit/test_conflicts.py`
 
 **Interfaces:**
-- Produces:
 
 ```python
 evaluate_conflicts(
@@ -605,66 +504,45 @@ evaluate_conflicts(
 ) -> list[Conflict]
 ```
 
-`Conflict` includes:
-- `resource`: cpu | memory | gpu | gpu_device
-- `certainty`: confirmed | uncertain
-- `start_at`, `end_at`
-- `requested`
-- `available`
-- `conflicting_reservation_ids`
-- human-readable `reason`
+`Conflict` contains `resource`, `certainty`, segment start/end, requested, available, conflicting reservation IDs, and reason.
 
-- [ ] **Step 1: Write failing tests for interval semantics**
+- [ ] **Step 1: Write failing cases**
 
-Required cases:
-1. `[10:00, 11:00)` and `[11:00, 12:00)` -> no conflict.
-2. `[10:00, 11:00)` and `[10:59, 12:00)` -> overlap.
-3. Candidate CPU 16 plus two overlapping 12-core reservations on a 32-core server -> conflict only in the segment where all three overlap.
-4. Memory capacity unknown -> do not invent a confirmed memory conflict.
-5. Explicit GPU IDs `[0,1]` vs `[1,2]` -> confirmed `gpu_device` conflict on GPU 1.
-6. Explicit GPU IDs `[0,1]` vs `[2,3]` on four-GPU server -> no GPU-device conflict.
-7. Candidate requests two GPUs without IDs while overlapping two-GPU count-only reservation on four-GPU server -> no aggregate conflict.
-8. Same case with three-GPU existing reservation -> aggregate GPU conflict.
-9. Candidate explicit GPU `[0]` overlaps count-only reservation -> mark device placement conflict `uncertain` only when aggregate capacity cannot prove safety.
-10. Cancelled reservations do not consume capacity.
+Required:
+1. Adjacent `[10:00,11:00)` / `[11:00,12:00)` => no conflict.
+2. One-minute overlap => overlap.
+3. Candidate CPU 16 + two 12-core reservations on a 32-core server => conflict only where all three overlap.
+4. Unknown memory capacity => no invented confirmed memory conflict.
+5. Explicit GPU `[0,1]` vs `[1,2]` => confirmed device conflict on GPU 1.
+6. Explicit GPU `[0,1]` vs `[2,3]` on four GPUs => no device conflict.
+7. Two count-only + two count-only on four GPUs => no aggregate conflict.
+8. Two count-only + three count-only on four GPUs => confirmed aggregate conflict.
+9. Explicit GPU candidate overlapping a count-only reservation => `uncertain` device-placement warning because exact assignment is unknowable; if aggregate GPU capacity is exceeded, also return a confirmed aggregate GPU conflict.
+10. Cancelled reservations consume no capacity.
 
-- [ ] **Step 2: Verify tests fail**
+- [ ] **Step 2: Verify failure**
 
 ```bash
 uv run pytest services/core/tests/unit/test_conflicts.py -q
 ```
 
-- [ ] **Step 3: Implement a boundary sweep, not pairwise-only arithmetic**
+- [ ] **Step 3: Implement segment sweep**
 
-Algorithm:
-1. Filter same-server, non-cancelled reservations whose interval overlaps the candidate.
-2. Collect candidate start/end plus all clipped overlap start/end boundaries.
-3. Sort unique boundaries.
-4. For each adjacent segment inside candidate, determine active existing reservations.
-5. Sum CPU, memory (only when capacity known), and GPU counts including the candidate.
-6. Evaluate explicit GPU-ID intersections separately.
-7. Coalesce adjacent conflict segments with identical resource/certainty/conflicting set.
+Filter same-server/non-cancelled overlaps; collect clipped time boundaries; evaluate each adjacent segment; sum candidate + active reservations for CPU/memory/GPU; evaluate explicit device intersections separately; coalesce adjacent identical conflict segments.
 
-This prevents false negatives when several reservations overlap only part of the candidate window.
-
-- [ ] **Step 4: Run tests and static checks**
+- [ ] **Step 4: Verify and commit**
 
 ```bash
 uv run pytest services/core/tests/unit/test_conflicts.py -q
 uv run ruff check services/core/src/labserver_core/domain/conflicts.py services/core/tests/unit/test_conflicts.py
 uv run mypy services/core/src/labserver_core/domain/conflicts.py
-```
-
-- [ ] **Step 5: Commit**
-
-```bash
 git add services/core/src/labserver_core/domain/conflicts.py services/core/tests/unit/test_conflicts.py
 git commit -m "feat: add advisory reservation conflict engine"
 ```
 
 ---
 
-### Task 7: Implement request application service and transactional idempotent approval
+### Task 7: Implement request service and transactional idempotent approval
 
 **Files:**
 - Create: `services/core/src/labserver_core/application/request_service.py`
@@ -673,96 +551,68 @@ git commit -m "feat: add advisory reservation conflict engine"
 - Create: `services/core/tests/persistence/test_approval_transaction.py`
 
 **Interfaces:**
-- Produces `create_request`, `update_draft`, `submit_request`, `cancel_request`, `reject_request`, `approve_request`.
-- Produces `preview_request_conflicts(request_id, actor) -> list[Conflict]`.
+- `create_request`, `list_requests`, `get_request`, `update_draft`, `submit_request`, `cancel_request`, `reject_request`, `approve_request`.
+- `list_reservations` and `preview_request_conflicts`.
 - `approve_request` returns the created or already-existing reservation.
 
-- [ ] **Step 1: Write application tests first**
+- [ ] **Step 1: Write failing service tests**
 
-Cover:
-- member creates own draft;
-- member cannot create a draft for another user;
-- draft can be edited by owner;
-- submitted request cannot be edited as draft;
-- submitting validates server enabled and capacity;
-- admin rejection stores status actor/audit event;
-- admin approval creates one reservation;
-- calling approval twice returns the same reservation ID;
-- conflict warnings do not block approval;
-- a failed reservation insert rolls back request status to `submitted`.
+Cover owner creation/editing, cross-user denial, submitted-edit denial, enabled/capacity validation, audit actor on rejection, one reservation on approval, same reservation on repeated approval, advisory conflicts not blocking approval, and rollback to `submitted` if reservation persistence fails.
 
-- [ ] **Step 2: Verify tests fail**
+- [ ] **Step 2: Verify failure**
 
 ```bash
 uv run pytest services/core/tests/unit/test_request_service.py services/core/tests/persistence/test_approval_transaction.py -q
 ```
 
-- [ ] **Step 3: Implement application orchestration through repositories/UoW**
-
-Approval sequence inside one UoW:
+- [ ] **Step 3: Implement approval in one UoW**
 
 ```text
 load request
 -> authorize admin
--> if already approved: load reservation by request_id and return it
--> validate transition submitted -> approved
--> build reservation with end_at = planned_start + duration
+-> if approved: return reservation by request_id
+-> validate submitted -> approved
+-> build reservation (end = start + duration)
 -> evaluate advisory conflicts
--> persist approved request + reservation + audit event
+-> persist request + reservation + audit event
 -> commit once
 ```
 
-The DB unique constraint on `reservations.request_id` is a second idempotency guard.
+`reservations.request_id` unique constraint is the second idempotency guard.
 
-- [ ] **Step 4: Run tests**
+- [ ] **Step 4: Verify and commit**
 
 ```bash
 uv run pytest services/core/tests/unit/test_request_service.py services/core/tests/persistence/test_approval_transaction.py -q
-```
-
-Expected: PASS.
-
-- [ ] **Step 5: Commit**
-
-```bash
 git add services/core/src/labserver_core/application services/core/tests/unit/test_request_service.py services/core/tests/persistence/test_approval_transaction.py
 git commit -m "feat: implement request approval workflow"
 ```
 
 ---
 
-### Task 8: Expose thin versioned FastAPI routes and stable API errors
+### Task 8: Expose thin versioned FastAPI routes with stable error codes
 
 **Files:**
 - Create: `services/core/src/labserver_core/api/errors.py`
 - Create: `services/core/src/labserver_core/api/router.py`
-- Create: `services/core/src/labserver_core/api/routes/health.py`
-- Create: `services/core/src/labserver_core/api/routes/users.py`
-- Create: `services/core/src/labserver_core/api/routes/servers.py`
-- Create: `services/core/src/labserver_core/api/routes/requests.py`
-- Create: `services/core/src/labserver_core/api/routes/reservations.py`
+- Create: `services/core/src/labserver_core/api/routes/{health,users,servers,requests,reservations}.py`
 - Create: `services/core/src/labserver_core/app.py`
-- Create: `services/core/tests/api/test_health.py`
-- Create: `services/core/tests/api/test_servers.py`
-- Create: `services/core/tests/api/test_requests.py`
-- Create: `services/core/tests/api/test_approval.py`
+- Create: `services/core/tests/api/{test_health,test_users,test_servers,test_requests,test_approval}.py`
 
 **Interfaces:**
-- `GET /healthz` — no auth; only verifies core process/database readiness, never calls lab hosts.
-- `GET /api/v1/users` — admin.
-- `POST /api/v1/users` — admin.
-- `GET /api/v1/servers` — authenticated member/admin.
-- `POST /api/v1/servers` — admin.
-- `POST /api/v1/requests` — authenticated member/admin, creates own request unless admin acts explicitly.
-- `PATCH /api/v1/requests/{id}` — owner while draft, or admin under service rules.
-- `POST /api/v1/requests/{id}/submit`.
-- `POST /api/v1/requests/{id}/cancel`.
-- `POST /api/v1/requests/{id}/approve` — admin.
-- `POST /api/v1/requests/{id}/reject` — admin.
-- `GET /api/v1/reservations` — authenticated member/admin.
-- `GET /api/v1/requests/{id}/conflicts` — preview advisory conflicts.
+- `GET /healthz` — no auth; process + DB readiness only, never lab hosts.
+- `GET/POST /api/v1/users` — admin.
+- `GET /api/v1/servers` — member/admin; `POST /api/v1/servers` — admin.
+- `GET /api/v1/requests` — member sees own; admin sees all.
+- `GET /api/v1/requests/{id}` — owner/admin.
+- `POST /api/v1/requests` — creates own request; admin may explicitly choose owner through application service only if contract provides that field later via approved change.
+- `PATCH /api/v1/requests/{id}` — owner while draft/admin per service rules.
+- `POST /api/v1/requests/{id}/{submit|cancel}` — owner/admin per service rules.
+- `POST /api/v1/requests/{id}/{approve|reject}` — admin.
+- `GET /api/v1/requests/{id}/conflicts` — owner/admin.
+- `GET /api/v1/reservations?start=&end=&server_id=` — member/admin.
 
-Stable error body:
+Stable error envelope:
 
 ```json
 {
@@ -773,13 +623,11 @@ Stable error body:
 }
 ```
 
-- [ ] **Step 1: Write API tests with dependency overrides**
+- [ ] **Step 1: Write failing API tests using dependency overrides**
 
-Use `app.dependency_overrides[get_current_actor] = lambda: CurrentActor(...)`.
+Protected route without override => `401`; member on admin route => `403`; invalid transition/capacity/not-found errors map to deterministic codes and 4xx statuses.
 
-Test unauthenticated calls to protected routes return `401`; member admin-only calls return `403`; domain errors map to deterministic codes and appropriate 4xx statuses.
-
-- [ ] **Step 2: Verify API tests fail**
+- [ ] **Step 2: Verify failure**
 
 ```bash
 uv run pytest services/core/tests/api -q
@@ -787,36 +635,19 @@ uv run pytest services/core/tests/api -q
 
 - [ ] **Step 3: Implement thin routes**
 
-Routes may:
-- validate DTOs;
-- resolve dependencies;
-- call application services;
-- map domain entities to contracts.
+Routes only validate DTOs, resolve dependencies, call application services, and map entities to contracts. They may not query SQLAlchemy, calculate conflicts, directly mutate lifecycle status, or inspect IPs.
 
-Routes may **not**:
-- calculate conflicts;
-- mutate statuses directly;
-- create SQLAlchemy queries;
-- inspect server IPs.
-
-- [ ] **Step 4: Run API tests**
+- [ ] **Step 4: Verify and commit**
 
 ```bash
 uv run pytest services/core/tests/api -q
-```
-
-Expected: PASS.
-
-- [ ] **Step 5: Commit**
-
-```bash
 git add services/core/src/labserver_core/api services/core/src/labserver_core/app.py services/core/tests/api
 git commit -m "feat: expose core planning API"
 ```
 
 ---
 
-### Task 9: Document the M1 API and enforce contract/architecture checks
+### Task 9: Document Core v1 and enforce architecture boundaries
 
 **Files:**
 - Create: `docs/api/core-v1.md`
@@ -824,41 +655,24 @@ git commit -m "feat: expose core planning API"
 - Modify: `README.md`
 
 **Interfaces:**
-- Documents route, role, request/response contract, and status/error semantics for all M1 endpoints.
-- Adds a simple import-boundary test preventing route modules from importing ORM model modules directly.
+- Documents route/role/request/response/error semantics.
+- Adds source-level guard against API routes importing ORM/SQLAlchemy internals.
 
-- [ ] **Step 1: Write an architecture-boundary test**
+- [ ] **Step 1: Write the architecture guard test**
 
-The test parses imports under `services/core/src/labserver_core/api/routes/` and fails if a route imports:
+Parse imports under `api/routes/` and reject `labserver_core.persistence.models` or direct `sqlalchemy` imports. Also scan `packages/contracts/src` and reject any `labserver_core` import. Prove the checker using synthetic source strings inside the test, not by modifying production code.
 
-```text
-labserver_core.persistence.models
-sqlalchemy
+- [ ] **Step 2: Verify**
+
+```bash
+uv run pytest services/core/tests/test_architecture_boundaries.py -q
 ```
-
-It also verifies `labserver_contracts` has no import from `labserver_core`.
-
-- [ ] **Step 2: Run and verify the test catches a synthetic forbidden import**
-
-Use a synthetic source string inside the test to prove the checker rejects `from sqlalchemy import select`; do not modify production source merely to test the guard.
 
 - [ ] **Step 3: Write `docs/api/core-v1.md`**
 
-Document:
-- auth requirement (`CurrentActor` boundary; human transport not yet implemented);
-- role matrix;
-- logical server identity rule;
-- request state machine;
-- approval idempotency;
-- advisory conflict semantics;
-- error envelope;
-- explicit statement that M1 performs no remote execution or host polling.
+Document default-deny actor boundary, role matrix, logical server identity, request state machine, idempotent approval, advisory conflict semantics, error envelope, and explicit statement that M1 performs no host polling/remote execution.
 
-- [ ] **Step 4: Update README status**
-
-README should state Milestone 1 core is the current implementation target and link to the spec, plan, and API document.
-
-- [ ] **Step 5: Commit**
+- [ ] **Step 4: Update README and commit**
 
 ```bash
 git add docs/api services/core/tests/test_architecture_boundaries.py README.md
@@ -867,15 +681,12 @@ git commit -m "docs: define core v1 API and architecture checks"
 
 ---
 
-### Task 10: Final Milestone 1 verification and current-state update
+### Task 10: Final M1 verification and state update
 
 **Files:**
 - Modify: `docs/CURRENT_STATE.md`
 
-**Interfaces:**
-- No new runtime interface. This task proves the milestone is internally coherent before PR review.
-
-- [ ] **Step 1: Run full locked verification**
+- [ ] **Step 1: Run locked verification**
 
 ```bash
 uv sync --all-packages --dev --locked
@@ -884,9 +695,9 @@ uv run mypy services/core/src packages/contracts/src
 uv run pytest -q
 ```
 
-Expected: all commands PASS.
+All commands must PASS.
 
-- [ ] **Step 2: Run migration from an empty database**
+- [ ] **Step 2: Migrate an empty database**
 
 ```bash
 rm -f /tmp/labserver-m1-smoke.sqlite
@@ -894,26 +705,19 @@ LABSERVER_DATABASE_URL=sqlite:////tmp/labserver-m1-smoke.sqlite \
   uv run alembic -c services/core/alembic.ini upgrade head
 ```
 
-Expected: exit `0`; initial schema is created with foreign keys enabled.
+Expected: exit `0` and initial schema created.
 
-- [ ] **Step 3: Run an API smoke test with test dependency injection, never a real auth bypass**
+- [ ] **Step 3: API smoke test**
 
-Use `fastapi.testclient.TestClient` in a pytest test to confirm:
-- `/healthz` returns 200;
-- protected endpoint returns 401 without actor override;
-- with test actor override, server/request CRUD path works against temporary SQLite.
+Use `fastapi.testclient.TestClient` in pytest: `/healthz` => 200; protected endpoint => 401 without actor; actor override enables user/server/request flow against temporary SQLite. Never create a production auth bypass for this smoke test.
 
 - [ ] **Step 4: Secret/private-infrastructure scan**
 
-Run repository grep for common secret/IP patterns and manually inspect the diff. Confirm no actual fwq host IP, token, password, SSH key, or lab username was committed.
+Search diff/repository for credential/private-IP/key patterns and manually inspect it. Confirm no real fwq IP, token, password, SSH material, or lab username was committed.
 
-- [ ] **Step 5: Update `docs/CURRENT_STATE.md`**
+- [ ] **Step 5: Update state only after all evidence passes**
 
-Only after verification passes, record:
-- Milestone 1 implemented;
-- exact verification commands and result;
-- current implementation branch/PR;
-- next gate is Milestone 2 design/plan for read-only Lab Agent + Running view.
+`docs/CURRENT_STATE.md` records M1 as implemented, the exact verification commands, implementation PR, and next gate: M2 read-only Lab Agent + Running view plan.
 
 - [ ] **Step 6: Commit**
 
@@ -926,23 +730,20 @@ git commit -m "docs: record milestone 1 verification state"
 
 ## Milestone 1 Acceptance Criteria
 
-Milestone 1 is complete only when all of the following are true:
-
-1. A clean checkout can install strictly from `uv.lock` and run CI without lab-network access.
-2. `labserver_contracts` is independently importable and contains no core/persistence dependency.
-3. Shared lifecycle/role enums have one source of truth in `labserver_contracts.common`.
-4. An empty SQLite database migrates to head successfully with foreign keys enforced.
-5. Managed servers persist logical keys/capacities only; no private IP is persisted as identity.
-6. Members/admins are represented in the domain and authorization rules are unit-tested.
-7. Protected HTTP routes deny access by default; tests inject actors explicitly.
-8. Request state transitions match the approved spec.
-9. Approval is transactional and idempotent and creates at most one reservation per request.
-10. Adjacent half-open reservations do not conflict; true overlapping aggregate CPU/memory/GPU over-capacity does.
-11. Explicit GPU-ID collisions are reported; count-only placement uncertainty is labeled, not guessed.
-12. Conflicts remain advisory and do not prevent approval unless a future approved policy changes that rule.
-13. Routes contain no ORM queries or conflict calculations.
-14. Full test/lint/type-check suite passes.
-15. No real lab IP, credential, token, SSH material, or private username is present in the repository.
+1. Clean checkout installs from `uv.lock` and CI runs without lab-network access.
+2. Every task ends with passing tests/checks; no intermediate task intentionally leaves CI red.
+3. `labserver_contracts` has no core/persistence dependency.
+4. Shared lifecycle/role enums exist only in `labserver_contracts.common`.
+5. Empty SQLite migrates to head with foreign keys enforced.
+6. Managed servers persist logical keys/capacities only; no private IP is database identity.
+7. Member/admin authorization is unit-tested and HTTP protected routes deny by default.
+8. Request transitions match the approved spec.
+9. Approval is transactional/idempotent and creates at most one reservation per request.
+10. Half-open interval, aggregate CPU/memory/GPU, explicit GPU-ID, and uncertain count-only placement cases are tested.
+11. Conflicts remain advisory.
+12. API routes contain no ORM queries or conflict calculations.
+13. Full test/lint/type-check suite passes.
+14. Repository contains no real lab IP, credential, token, SSH material, or private username.
 
 ## Explicitly Deferred to Later Milestones
 
