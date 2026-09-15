@@ -160,6 +160,26 @@ class PlanService:
             require_self_or_admin(actor, plan.owner_id)
 
             changes = data.model_dump(exclude_unset=True)
+            # Non-nullable plan columns must never be set to null, even though
+            # PlanUpdate types them optional for partial-update ergonomics.
+            nulled = {field for field in changes if changes[field] is None} & {
+                "server_id",
+                "title",
+                "start_at",
+                "end_at",
+            }
+            if nulled:
+                raise DomainValidationError(
+                    f"Fields cannot be set to null: {', '.join(sorted(nulled))}"
+                )
+            if changes.get("server_id") is not None and changes["server_id"] != plan.server_id:
+                # Keep update symmetric with create: the target server must exist
+                # and be enabled.
+                target = uow.servers.get(changes["server_id"])
+                if target is None:
+                    raise NotFound(f"Server {changes['server_id']} does not exist")
+                if not target.enabled:
+                    raise ServerDisabled(f"Server {target.key} is disabled")
             merged = replace(plan, **changes, updated_at=self._clock())
             try:
                 validate_plan_window(

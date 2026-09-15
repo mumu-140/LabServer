@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from labserver_contracts.plans import PlanConflictRead, PlanCreate, PlanRead, PlanUpdate
 
 from labserver_core.api.dependencies import get_current_actor, get_plan_service
@@ -10,6 +10,15 @@ from labserver_core.application.actors import CurrentActor
 from labserver_core.application.plan_service import PlanService
 
 router = APIRouter(prefix="/plans", tags=["plans"])
+
+
+def _require_aware(value: datetime | None, name: str) -> datetime | None:
+    if value is not None and value.tzinfo is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=f"{name} must include a timezone",
+        )
+    return value
 
 
 @router.get("", response_model=list[PlanRead])
@@ -22,6 +31,8 @@ def list_plans(
     end: Annotated[datetime | None, Query()] = None,
     include_cancelled: bool = False,
 ) -> list[PlanRead]:
+    start = _require_aware(start, "start")
+    end = _require_aware(end, "end")
     return service.list(
         actor,
         server_id=server_id,

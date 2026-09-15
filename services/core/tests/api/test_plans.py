@@ -3,7 +3,7 @@ from typing import Any
 from fastapi.testclient import TestClient
 from labserver_contracts.common import UserRole
 
-from .conftest import MEMBER_ID, OTHER_ID, SERVER_ID, ApiContext
+from .conftest import ADMIN_ID, MEMBER_ID, OTHER_ID, SERVER_ID, ApiContext
 
 START = "2026-09-20T08:00:00Z"
 END = "2026-09-20T10:00:00Z"
@@ -165,3 +165,51 @@ def test_plan_conflicts_are_advisory_payloads(api_context: ApiContext) -> None:
     assert items[0]["resource"] == "gpu_device"
     assert items[0]["certainty"] == "confirmed"
     assert first["id"] in items[0]["conflicting_plan_ids"]
+
+
+def test_plan_update_rejects_nulling_non_nullable_fields(
+    api_context: ApiContext,
+) -> None:
+    client = as_member(api_context)
+    plan_id = client.post("/api/v1/plans", json=payload()).json()["id"]
+
+    for field in ("title", "start_at", "end_at"):
+        response = client.patch(f"/api/v1/plans/{plan_id}", json={field: None})
+        assert response.status_code == 422
+        assert response.json()["error"]["code"] == "validation_error"
+
+
+def test_plan_update_validates_target_server_like_create(
+    api_context: ApiContext,
+) -> None:
+    member = as_member(api_context)
+    plan_id = member.post("/api/v1/plans", json=payload()).json()["id"]
+
+    missing = member.patch(
+        f"/api/v1/plans/{plan_id}",
+        json={"server_id": "00000000-0000-0000-0000-000000009999"},
+    )
+    assert missing.status_code == 404
+
+    api_context.act_as(ADMIN_ID, UserRole.ADMIN)
+    disabled = api_context.client.post(
+        "/api/v1/servers", json={"key": "fwq51", "display_name": "fwq51", "enabled": False}
+    )
+    assert disabled.status_code == 201, disabled.text
+    disabled_id = disabled.json()["id"]
+
+    api_context.act_as(MEMBER_ID, UserRole.MEMBER)
+    moved = api_context.client.patch(
+        f"/api/v1/plans/{plan_id}", json={"server_id": disabled_id}
+    )
+    assert moved.status_code == 409
+    assert moved.json()["error"]["code"] == "server_disabled"
+
+
+def test_plan_list_rejects_naive_datetime_filters(api_context: ApiContext) -> None:
+    client = as_member(api_context)
+    response = client.get(
+        "/api/v1/plans", params={"start": "2026-09-20T08:00:00"}
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "validation_error"
