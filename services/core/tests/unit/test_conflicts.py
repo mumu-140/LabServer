@@ -94,7 +94,7 @@ def test_one_minute_explicit_gpu_overlap_is_confirmed() -> None:
     assert conflict.start_at == BASE + timedelta(minutes=59)
     assert conflict.end_at == BASE + timedelta(minutes=60)
     assert conflict.requested == (1,)
-    assert conflict.conflicting_reservation_ids == (existing.id,)
+    assert conflict.conflicting_plan_ids == (existing.id,)
 
 
 def test_cpu_capacity_conflict_is_limited_to_segment_where_all_overlap() -> None:
@@ -115,7 +115,7 @@ def test_cpu_capacity_conflict_is_limited_to_segment_where_all_overlap() -> None
     assert conflict.end_at == BASE + timedelta(minutes=120)
     assert conflict.requested == 16.0
     assert conflict.available == 8.0
-    assert conflict.conflicting_reservation_ids == (first.id, second.id)
+    assert conflict.conflicting_plan_ids == (first.id, second.id)
 
 
 def test_unknown_memory_capacity_does_not_invent_confirmed_conflict() -> None:
@@ -155,7 +155,7 @@ def test_explicit_gpu_id_intersection_is_confirmed() -> None:
     assert len(device_conflicts) == 1
     assert device_conflicts[0].certainty is ConflictCertainty.CONFIRMED
     assert device_conflicts[0].requested == (1,)
-    assert device_conflicts[0].conflicting_reservation_ids == (existing.id,)
+    assert device_conflicts[0].conflicting_plan_ids == (existing.id,)
 
 
 def test_disjoint_explicit_gpu_ids_do_not_conflict() -> None:
@@ -199,7 +199,7 @@ def test_count_only_gpu_aggregate_over_capacity_is_confirmed() -> None:
     assert gpu_conflicts[0].certainty is ConflictCertainty.CONFIRMED
     assert gpu_conflicts[0].requested == 2.0
     assert gpu_conflicts[0].available == 1.0
-    assert gpu_conflicts[0].conflicting_reservation_ids == (existing.id,)
+    assert gpu_conflicts[0].conflicting_plan_ids == (existing.id,)
 
 
 def test_explicit_candidate_vs_count_only_existing_is_uncertain_even_when_aggregate_fits() -> None:
@@ -220,7 +220,7 @@ def test_explicit_candidate_vs_count_only_existing_is_uncertain_even_when_aggreg
     assert conflict.certainty is ConflictCertainty.UNCERTAIN
     assert conflict.requested == (0,)
     assert conflict.available is None
-    assert conflict.conflicting_reservation_ids == (existing.id,)
+    assert conflict.conflicting_plan_ids == (existing.id,)
 
 
 def test_uncertain_device_warning_can_coexist_with_confirmed_aggregate_gpu_conflict() -> None:

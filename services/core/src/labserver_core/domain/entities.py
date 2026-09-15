@@ -8,6 +8,7 @@ from labserver_contracts.common import (
     TaskRequestStatus,
     UserRole,
 )
+from labserver_contracts.plans import PlanDisplayState
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,6 +36,31 @@ class ManagedServer:
     display_name: str
     enabled: bool
     capacity: ServerCapacity
+    created_at: datetime
+    updated_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class PlanEntry:
+    """A published intent to use a server during a time window.
+
+    Optional resource fields mean *not declared*; they never mean zero usage.
+    Display state is derived from time, so no lifecycle status is stored.
+    """
+
+    id: UUID
+    owner_id: UUID
+    server_id: UUID
+    title: str
+    project: str | None
+    start_at: datetime
+    end_at: datetime
+    cpu_cores: int | None
+    memory_gb: float | None
+    gpu_count: int | None
+    gpu_ids: tuple[int, ...] | None
+    note: str | None
+    cancelled_at: datetime | None
     created_at: datetime
     updated_at: datetime
 
@@ -87,3 +113,15 @@ class AuditEvent:
     actor_id: UUID | None
     occurred_at: datetime
     details: dict[str, object] | None = None
+
+
+def plan_display_state(plan: PlanEntry, now: datetime) -> PlanDisplayState:
+    """Derive the display state from time alone; never persisted."""
+
+    if plan.cancelled_at is not None:
+        return PlanDisplayState.CANCELLED
+    if now < plan.start_at:
+        return PlanDisplayState.UPCOMING
+    if now < plan.end_at:
+        return PlanDisplayState.ONGOING
+    return PlanDisplayState.PAST
