@@ -32,7 +32,7 @@ class PlanDisplayState(StrEnum):
     PAST = "past"
 
 
-def _validate_plan_window(
+def validate_plan_window(
     start_at: datetime | None,
     end_at: datetime | None,
     gpu_count: int | None,
@@ -63,7 +63,7 @@ class PlanCreate(StrictWriteModel):
 
     @model_validator(mode="after")
     def validate_plan(self) -> Self:
-        _validate_plan_window(self.start_at, self.end_at, self.gpu_count, self.gpu_ids)
+        validate_plan_window(self.start_at, self.end_at, self.gpu_count, self.gpu_ids)
         return self
 
 
@@ -83,7 +83,7 @@ class PlanUpdate(StrictWriteModel):
 
     @model_validator(mode="after")
     def validate_plan(self) -> Self:
-        _validate_plan_window(self.start_at, self.end_at, self.gpu_count, self.gpu_ids)
+        validate_plan_window(self.start_at, self.end_at, self.gpu_count, self.gpu_ids)
         return self
 
 
