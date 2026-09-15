@@ -13,7 +13,7 @@ The initial target is a small set of Linux compute servers on the same private n
 
 ## Project status
 
-**Architecture approved; implementation planning in progress. No production deployment yet.**
+**Architecture approved; Milestone 1 central planning core is implemented on PR #3 and under final review. No production deployment yet.**
 
 The design baseline is maintained under `docs/`. Start with:
 
@@ -21,6 +21,8 @@ The design baseline is maintained under `docs/`. Start with:
 - `docs/PROJECT_KNOWLEDGE.md` — stable project context and decisions.
 - `docs/CURRENT_STATE.md` — current implementation state and next step.
 - `docs/superpowers/specs/2026-09-15-labserver-design.md` — approved architecture baseline.
+- `docs/superpowers/plans/2026-09-15-m1-foundation-core.md` — Milestone 1 execution plan.
+- `docs/api/core-v1.md` — current Core v1 HTTP/authorization semantics.
 
 ## Design principle
 
