@@ -13,14 +13,14 @@ The initial target is a small set of Linux compute servers on the same private n
 
 ## Project status
 
-**Architecture/design phase. No production deployment yet.**
+**Architecture approved; implementation planning in progress. No production deployment yet.**
 
 The design baseline is maintained under `docs/`. Start with:
 
 - `AGENTS.md` — repository-wide guardrails and harness routing.
 - `docs/PROJECT_KNOWLEDGE.md` — stable project context and decisions.
 - `docs/CURRENT_STATE.md` — current implementation state and next step.
-- `docs/superpowers/specs/2026-09-15-labserver-design.md` — proposed architecture for review.
+- `docs/superpowers/specs/2026-09-15-labserver-design.md` — approved architecture baseline.
 
 ## Design principle
 
