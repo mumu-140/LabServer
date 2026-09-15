@@ -6,7 +6,7 @@
 
 **Architecture:** Use a small Python monorepo workspace with an independent contracts package and a FastAPI core service. Business rules live in framework-independent domain/application modules; SQLAlchemy/Alembic are persistence adapters; HTTP routes are thin adapters. Authentication transport is intentionally not implemented in Milestone 1: API authorization consumes a `CurrentActor` dependency that is **default-deny in production** and overridden in tests, so no temporary insecure header-based auth is introduced.
 
-**Tech Stack:** Python 3.13; uv workspace/lockfile; FastAPI 0.141.1; Pydantic 2.13.5; SQLAlchemy 2.0.52; Alembic 1.20.0; SQLite; pytest 9.1.1; Ruff 0.16.7; mypy 2.3.1; GitHub Actions.
+**Tech Stack:** Python 3.13; uv workspace/lockfile; FastAPI 0.141.1; Pydantic 2.13.5; SQLAlchemy 2.0.52; Alembic 1.20.0; Uvicorn 0.52.4; HTTPX 0.28.1; SQLite; pytest 9.1.1; Ruff 0.16.7; mypy 2.3.1; GitHub Actions.
 
 **Spec:** `docs/superpowers/specs/2026-09-15-labserver-design.md`
 
@@ -24,8 +24,9 @@
 - Conflicts are advisory in V1; conflict detection never dispatches, blocks, kills, or moves workloads.
 - Business rules belong in `services/core/src/labserver_core/domain` or `application`, not in routes or ORM models.
 - Shared API schemas/enums belong in `packages/contracts`; contracts contain no database access or service logic.
+- Shared enums have one source of truth in `labserver_contracts.common`; core imports them and does not redefine them.
 - HTTP authorization must default to deny until a real human-auth adapter is implemented in a later milestone.
-- Python runtime baseline is 3.13. Do not adopt prerelease dependencies (for example SQLAlchemy 2.1 RC) in this milestone.
+- Python runtime baseline is 3.13. Do not adopt prerelease dependencies (for example SQLAlchemy 2.1 RC or HTTPX 1.0 dev) in this milestone.
 
 ---
 
@@ -81,7 +82,6 @@ LabServer/
 │       │   │   └── server_service.py
 │       │   ├── domain/
 │       │   │   ├── entities.py
-│       │   │   ├── enums.py
 │       │   │   ├── errors.py
 │       │   │   ├── transitions.py
 │       │   │   └── conflicts.py
@@ -93,9 +93,12 @@ LabServer/
 │       └── tests/
 │           ├── conftest.py
 │           ├── unit/
+│           │   ├── test_authorization.py
+│           │   ├── test_request_service.py
 │           │   ├── test_transitions.py
 │           │   └── test_conflicts.py
 │           ├── persistence/
+│           │   ├── test_approval_transaction.py
 │           │   └── test_migrations.py
 │           └── api/
 │               ├── test_health.py
@@ -138,11 +141,15 @@ name = "labserver-workspace"
 version = "0.0.0"
 requires-python = ">=3.13,<3.14"
 
+[tool.uv]
+package = false
+
 [tool.uv.workspace]
 members = ["packages/contracts", "services/core"]
 
 [dependency-groups]
 dev = [
+  "httpx==0.28.1",
   "mypy==2.3.1",
   "pytest==9.1.1",
   "ruff==0.16.7",
@@ -192,7 +199,7 @@ dependencies = [
   "labserver-contracts",
   "pydantic==2.13.5",
   "sqlalchemy==2.0.52",
-  "uvicorn==0.35.0",
+  "uvicorn==0.52.4",
 ]
 
 [tool.uv.sources]
@@ -251,7 +258,7 @@ git commit -m "chore: establish Python workspace and CI"
 
 ---
 
-### Task 2: Define stable shared contracts and domain enums
+### Task 2: Define stable shared contracts and enums
 
 **Files:**
 - Create: `packages/contracts/src/labserver_contracts/common.py`
@@ -261,18 +268,21 @@ git commit -m "chore: establish Python workspace and CI"
 - Create: `packages/contracts/src/labserver_contracts/reservations.py`
 - Modify: `packages/contracts/src/labserver_contracts/__init__.py`
 - Create: `packages/contracts/tests/test_serialization.py`
-- Create: `services/core/src/labserver_core/domain/enums.py`
 
 **Interfaces:**
-- Produces enums: `UserRole`, `TaskRequestStatus`, `ReservationStatus`, `ReservationSource`, `ConflictCertainty`, `ConflictResource`.
+- `labserver_contracts.common` is the single source of truth for `UserRole`, `TaskRequestStatus`, `ReservationStatus`, `ReservationSource`, `ConflictCertainty`, and `ConflictResource`.
 - Produces API DTOs: `UserRead`, `ServerRead`, `TaskRequestCreate`, `TaskRequestRead`, `ReservationRead`, `ConflictRead`, `ErrorResponse`.
-- JSON datetime contract is UTC ISO-8601; UUIDs serialize as strings.
+- Core domain/application code imports shared enums from `labserver_contracts.common`; it never redeclares them.
+- UUIDs serialize as strings and datetimes must be timezone-aware UTC values.
 
 - [ ] **Step 1: Write serialization tests first**
 
 Create tests covering:
 
 ```python
+from datetime import timedelta
+
+
 def test_task_request_contract_round_trip() -> None:
     payload = {
         "title": "Poplar assembly",
@@ -288,10 +298,10 @@ def test_task_request_contract_round_trip() -> None:
     }
     model = TaskRequestCreate.model_validate(payload)
     assert model.preferred_gpu_ids == [0, 1]
-    assert model.model_dump(mode="json")["planned_start"].endswith("Z")
+    assert model.planned_start.utcoffset() == timedelta(0)
 ```
 
-Also test duplicate GPU IDs are rejected and negative CPU/GPU values are rejected by DTO validation.
+Also test duplicate GPU IDs are rejected, naive datetimes are rejected, and negative CPU/GPU values are rejected by DTO validation.
 
 - [ ] **Step 2: Run the contract test and verify failure**
 
@@ -309,6 +319,7 @@ Use `ConfigDict(extra="forbid")` for request/write DTOs. Do not include server I
 
 `TaskRequestCreate` must enforce:
 - non-empty trimmed `title`;
+- timezone-aware `planned_start`, normalized to UTC;
 - `planned_duration_minutes > 0`;
 - `requested_cpu_cores >= 0`;
 - `requested_gpu_count >= 0`;
@@ -331,7 +342,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add packages/contracts services/core/src/labserver_core/domain/enums.py
+git add packages/contracts
 git commit -m "feat: define core API contracts"
 ```
 
@@ -347,6 +358,7 @@ git commit -m "feat: define core API contracts"
 
 **Interfaces:**
 - Produces immutable/value-oriented entities: `User`, `ManagedServer`, `ServerCapacity`, `TaskRequest`, `Reservation`.
+- Imports lifecycle/role enums from `labserver_contracts.common`.
 - Produces `transition_request(request, target, actor_role) -> TaskRequest`.
 - Produces stable domain exceptions with `code`: `invalid_transition`, `forbidden`, `server_disabled`, `capacity_exceeded`, `not_found`, `validation_error`.
 
@@ -528,7 +540,7 @@ Expected: PASS.
 
 ```bash
 git add services/core/alembic.ini services/core/migrations services/core/src/labserver_core/config.py services/core/src/labserver_core/persistence services/core/tests
- git commit -m "feat: add SQLite persistence and initial migration"
+git commit -m "feat: add SQLite persistence and initial migration"
 ```
 
 ---
@@ -737,15 +749,17 @@ git commit -m "feat: implement request approval workflow"
 
 **Interfaces:**
 - `GET /healthz` — no auth; only verifies core process/database readiness, never calls lab hosts.
+- `GET /api/v1/users` — admin.
+- `POST /api/v1/users` — admin.
 - `GET /api/v1/servers` — authenticated member/admin.
 - `POST /api/v1/servers` — admin.
 - `POST /api/v1/requests` — authenticated member/admin, creates own request unless admin acts explicitly.
 - `PATCH /api/v1/requests/{id}` — owner while draft, or admin under service rules.
-- `POST /api/v1/requests/{id}/submit`
-- `POST /api/v1/requests/{id}/cancel`
+- `POST /api/v1/requests/{id}/submit`.
+- `POST /api/v1/requests/{id}/cancel`.
 - `POST /api/v1/requests/{id}/approve` — admin.
 - `POST /api/v1/requests/{id}/reject` — admin.
-- `GET /api/v1/reservations`
+- `GET /api/v1/reservations` — authenticated member/admin.
 - `GET /api/v1/requests/{id}/conflicts` — preview advisory conflicts.
 
 Stable error body:
@@ -826,7 +840,7 @@ It also verifies `labserver_contracts` has no import from `labserver_core`.
 
 - [ ] **Step 2: Run and verify the test catches a synthetic forbidden import**
 
-Temporarily introduce the forbidden import in the test fixture/sample string, verify failure, then remove the synthetic violation before commit.
+Use a synthetic source string inside the test to prove the checker rejects `from sqlalchemy import select`; do not modify production source merely to test the guard.
 
 - [ ] **Step 3: Write `docs/api/core-v1.md`**
 
@@ -884,7 +898,7 @@ Expected: exit `0`; initial schema is created with foreign keys enabled.
 
 - [ ] **Step 3: Run an API smoke test with test dependency injection, never a real auth bypass**
 
-Use `fastapi.testclient.TestClient` in a short test module/pytest test to confirm:
+Use `fastapi.testclient.TestClient` in a pytest test to confirm:
 - `/healthz` returns 200;
 - protected endpoint returns 401 without actor override;
 - with test actor override, server/request CRUD path works against temporary SQLite.
@@ -916,18 +930,19 @@ Milestone 1 is complete only when all of the following are true:
 
 1. A clean checkout can install strictly from `uv.lock` and run CI without lab-network access.
 2. `labserver_contracts` is independently importable and contains no core/persistence dependency.
-3. An empty SQLite database migrates to head successfully with foreign keys enforced.
-4. Managed servers persist logical keys/capacities only; no private IP is persisted as identity.
-5. Members/admins are represented in the domain and authorization rules are unit-tested.
-6. Protected HTTP routes deny access by default; tests inject actors explicitly.
-7. Request state transitions match the approved spec.
-8. Approval is transactional and idempotent and creates at most one reservation per request.
-9. Adjacent half-open reservations do not conflict; true overlapping aggregate CPU/memory/GPU over-capacity does.
-10. Explicit GPU-ID collisions are reported; count-only placement uncertainty is labeled, not guessed.
-11. Conflicts remain advisory and do not prevent approval unless a future approved policy changes that rule.
-12. Routes contain no ORM queries or conflict calculations.
-13. Full test/lint/type-check suite passes.
-14. No real lab IP, credential, token, SSH material, or private username is present in the repository.
+3. Shared lifecycle/role enums have one source of truth in `labserver_contracts.common`.
+4. An empty SQLite database migrates to head successfully with foreign keys enforced.
+5. Managed servers persist logical keys/capacities only; no private IP is persisted as identity.
+6. Members/admins are represented in the domain and authorization rules are unit-tested.
+7. Protected HTTP routes deny access by default; tests inject actors explicitly.
+8. Request state transitions match the approved spec.
+9. Approval is transactional and idempotent and creates at most one reservation per request.
+10. Adjacent half-open reservations do not conflict; true overlapping aggregate CPU/memory/GPU over-capacity does.
+11. Explicit GPU-ID collisions are reported; count-only placement uncertainty is labeled, not guessed.
+12. Conflicts remain advisory and do not prevent approval unless a future approved policy changes that rule.
+13. Routes contain no ORM queries or conflict calculations.
+14. Full test/lint/type-check suite passes.
+15. No real lab IP, credential, token, SSH material, or private username is present in the repository.
 
 ## Explicitly Deferred to Later Milestones
 
