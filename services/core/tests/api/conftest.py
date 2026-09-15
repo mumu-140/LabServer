@@ -42,6 +42,10 @@ class ApiContext:
 def upgrade_database(database_url: str) -> None:
     config = Config(str(CORE_DIR / "alembic.ini"))
     config.set_main_option("sqlalchemy.url", database_url)
+    # Driver-level autocommit: the pysqlite legacy isolation loses the alembic
+    # version stamp and post-DML DDL when the connection closes; see
+    # tests/persistence/test_migrations.py.
+    config.set_main_option("sqlalchemy.isolation_level", "AUTOCOMMIT")
     command.upgrade(config, "head")
 
 

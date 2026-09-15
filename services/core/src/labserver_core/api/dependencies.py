@@ -4,6 +4,7 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, Request, status
 
 from labserver_core.application.actors import CurrentActor
+from labserver_core.application.plan_service import PlanService
 from labserver_core.application.ports import UnitOfWork, UnitOfWorkFactory
 from labserver_core.application.request_service import RequestService
 from labserver_core.application.reservation_service import ReservationService
@@ -39,6 +40,12 @@ def get_request_service(
     uow_factory: Annotated[UnitOfWorkFactory, Depends(get_uow_factory)],
 ) -> RequestService:
     return RequestService(uow_factory)
+
+
+def get_plan_service(
+    uow_factory: Annotated[UnitOfWorkFactory, Depends(get_uow_factory)],
+) -> PlanService:
+    return PlanService(uow_factory)
 
 
 def get_reservation_service(
