@@ -1,0 +1,46 @@
+# Runtime secrets and local configuration
+.env
+.env.*
+!.env.example
+*.secret
+secrets/
+configs/local/
+configs/private/
+
+# Private infrastructure mappings
+*.hosts.local
+*.inventory.local
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# JavaScript / frontend
+node_modules/
+
+# Databases and runtime state
+*.db
+*.sqlite
+*.sqlite3
+runtime/
+data/
+
+# Coverage/build output
+.coverage
+htmlcov/
+dist/
+build/
+
+# IDE / OS
+.DS_Store
+.idea/
+.vscode/
+
+# Logs
+*.log
+logs/
