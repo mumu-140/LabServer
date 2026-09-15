@@ -19,7 +19,8 @@ Completed:
 - repository-wide `AGENTS.md` guardrails defined;
 - four-harness architecture defined (`web`, `core`, `agent`, `ops`);
 - stable project decisions recorded in `docs/PROJECT_KNOWLEDGE.md`;
-- initial architecture spec is being added under `docs/superpowers/specs/`.
+- initial architecture spec added under `docs/superpowers/specs/`;
+- draft design PR opened for review.
 
 Not yet implemented:
 - web application;
@@ -40,6 +41,7 @@ The next step is human review of the initial design spec. Implementation plannin
 - `docs/HARNESS_ARCHITECTURE.md`
 - `docs/PROJECT_KNOWLEDGE.md`
 - `docs/superpowers/specs/2026-09-15-labserver-design.md`
+- GitHub PR #1
 
 ## Important constraints
 
