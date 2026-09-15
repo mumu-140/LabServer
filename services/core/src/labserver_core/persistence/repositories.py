@@ -102,6 +102,10 @@ class UserRepository:
         model = self._session.get(UserModel, user_id)
         return _user_from_model(model) if model is not None else None
 
+    def get_by_username(self, username: str) -> User | None:
+        model = self._session.scalar(select(UserModel).where(UserModel.username == username))
+        return _user_from_model(model) if model is not None else None
+
     def add(self, user: User) -> None:
         self._session.add(
             UserModel(
@@ -148,6 +152,17 @@ class ServerRepository:
                 updated_at=server.updated_at,
             )
         )
+
+    def save(self, server: ManagedServer) -> None:
+        model = self._session.get(ManagedServerModel, server.id)
+        if model is None:
+            raise KeyError(f"Server {server.id} does not exist")
+        model.display_name = server.display_name
+        model.enabled = server.enabled
+        model.cpu_cores = server.capacity.cpu_cores
+        model.memory_gb = server.capacity.memory_gb
+        model.gpu_count = server.capacity.gpu_count
+        model.updated_at = server.updated_at
 
     def list_all(self) -> list[ManagedServer]:
         models = self._session.scalars(
