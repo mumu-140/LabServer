@@ -21,18 +21,20 @@ jobs:
       - run: uv run ruff check .
       - run: uv run mypy services/core/src packages/contracts/src
       - run: uv run pytest -q
-      - name: Export dependency wheel list
-        run: uv export --all-packages --all-groups --no-emit-workspace --no-hashes -o requirements-bootstrap.txt
-      - name: Download offline wheelhouse
+      - name: Export offline verification bundle
         run: |
+          uv export --all-packages --all-groups --no-emit-workspace --no-hashes -o requirements-bootstrap.txt
           python -m pip download -r requirements-bootstrap.txt -d wheelhouse
           python -m pip download hatchling colorama==0.4.6 -d wheelhouse
           cp "$(command -v uv)" uv-bootstrap
+          UV_CACHE_DIR="$(uv cache dir)"
+          tar -C "$(dirname "$UV_CACHE_DIR")" -czf uv-cache-bootstrap.tar.gz "$(basename "$UV_CACHE_DIR")"
       - uses: actions/upload-artifact@v4
         with:
           name: task1-bootstrap-deps
           path: |
             uv.lock
             uv-bootstrap
+            uv-cache-bootstrap.tar.gz
             wheelhouse/
           if-no-files-found: error
