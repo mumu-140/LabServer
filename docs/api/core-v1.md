@@ -48,7 +48,7 @@ M1 has two roles: `member` and `admin`.
 | Capability | member | admin |
 | --- | :---: | :---: |
 | Read logical server registry | yes | yes |
-| Create/update logical servers | no | yes |
+| Create logical servers | no | yes |
 | List users / create users | no | yes |
 | Create own request | yes | yes |
 | View own requests | yes | yes |
