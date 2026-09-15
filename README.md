@@ -20,7 +20,7 @@ The design baseline is maintained under `docs/`. Start with:
 - `AGENTS.md` — repository-wide guardrails and harness routing.
 - `docs/PROJECT_KNOWLEDGE.md` — stable project context and decisions.
 - `docs/CURRENT_STATE.md` — current implementation state and next step.
-- `docs/superpowers/specs/2026-09-15-labserver-design.md` — approved architecture baseline.
+- `docs/superpowers/specs/2026-09-15-labserver-design.md` — proposed architecture for review.
 
 ## Design principle
 
