@@ -25,11 +25,15 @@ Branch:
 
 `docs/m1-1-simple-planning-design`
 
-Design:
+Approved design:
 
 `docs/superpowers/specs/2026-09-15-m1-1-simple-planning-design.md`
 
-Status: draft for user review.
+Implementation plan:
+
+`docs/superpowers/plans/2026-09-15-m1-1-simple-planning.md`
+
+Status: design approved by the user; implementation plan written and ready for review/execution. No M1.1 implementation code has been written on this branch.
 
 ## M1.1 purpose
 
@@ -42,31 +46,45 @@ Simplify the planning model before deployment:
 - add a simple shared Schedule web surface;
 - remove approval/rejection language and scheduler semantics.
 
-The current M1 request/reservation implementation remains on `main` until M1.1 is reviewed, planned, implemented, tested, and merged.
+The current M1 request/reservation implementation remains on `main` until M1.1 is implemented, tested, reviewed, and merged.
+
+## M1.1 implementation sequence
+
+The approved plan uses eight gated tasks:
+1. plan contracts;
+2. `PlanEntry` domain + advisory conflict engine;
+3. `plan_entries` migration/repository/UoW;
+4. plan application service + ownership authorization;
+5. `/api/v1/plans` HTTP surface;
+6. minimal FastAPI/Jinja2/HTMX `/schedule` web harness;
+7. removal of obsolete request/approval/reservation product code;
+8. documentation + migration + full CI merge gate.
+
+The old slice is removed only after the replacement path is green.
 
 ## M2 direction after M1.1
 
-M2 will add observability while preserving the lightweight coordination model:
+M2 will add observability/deployment while preserving the lightweight coordination model:
 - Docker-first deployment;
 - Beszel as the primary infrastructure-monitoring source of truth;
 - a minimal read-only Runtime Collector only for user/PID/GPU-process attribution not provided by Beszel;
 - Running view combining monitoring state with runtime ownership;
 - host-specific deployment values remain outside Git and compose/templates stay host-agnostic.
 
-Detailed M2 design is intentionally gated behind M1.1 design approval so planning semantics are settled first.
+The current central deployment machine is an operational choice and must not be hard-coded into repository scripts or compose files.
 
 ## Important constraints
 
 - The GitHub repository is public. Never commit real private-network IPs, credentials, SSH material, tokens, usernames, or private command lines.
-- Deployment configuration must remain host-agnostic; the current central deployment machine is an operational choice, not a repository constant.
+- Deployment configuration must remain host-agnostic.
 - LabServer is not a scheduler. It coordinates intent, observes current use, reconciles where useful, and reports.
 - Beszel owns infrastructure monitoring/history/alerts; LabServer must not duplicate a telemetry platform.
 - Runtime collection is read-only. No remote shell, process kill, renice, package installation, or job submission.
-- Human authentication transport is not yet implemented; protected routes remain default-deny until an explicit design selects it.
+- Human authentication transport is not yet implemented; protected routes remain default-deny until an explicit trusted adapter is selected.
 
 ## Next gate
 
-1. User reviews and approves the M1.1 simple-planning design.
-2. Write the M1.1 implementation plan.
-3. Implement and verify M1.1 before any production deployment.
-4. Then finalize the M2 Docker + Beszel + Runtime Collector design and plan.
+1. Review/execute the approved M1.1 implementation plan.
+2. Verify migrations, Ruff, mypy, pytest, architecture/terminology guards, and final PR CI.
+3. Merge M1.1 only after the exact final head is green.
+4. Then finalize the M2 Docker + Beszel + Runtime Collector design and implementation plan.
