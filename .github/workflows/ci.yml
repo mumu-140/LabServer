@@ -6,34 +6,20 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   test:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
       - uses: astral-sh/setup-uv@v6
         with:
           version: "0.12.13"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - run: uv lock
       - run: uv sync --all-packages --dev --locked
       - run: uv run ruff check .
       - run: uv run mypy services/core/src packages/contracts/src
       - run: uv run pytest -q
-      - name: Commit verified lockfile
-        run: |
-          if [ -z "$(git status --porcelain -- uv.lock)" ]; then
-            echo "uv.lock already matches"
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add uv.lock
-          git commit -m "chore: lock milestone 1 dependencies"
-          git push origin "HEAD:${GITHUB_HEAD_REF}"
