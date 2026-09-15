@@ -7,6 +7,7 @@ from uuid import UUID
 from labserver_core.domain.entities import (
     AuditEvent,
     ManagedServer,
+    PlanEntry,
     Reservation,
     TaskRequest,
     User,
@@ -45,6 +46,21 @@ class ReservationRepositoryPort(Protocol):
     def list_window(self, start: datetime, end: datetime) -> list[Reservation]: ...
 
 
+class PlanRepositoryPort(Protocol):
+    def get(self, plan_id: UUID) -> PlanEntry | None: ...
+    def add(self, plan: PlanEntry) -> None: ...
+    def save(self, plan: PlanEntry) -> None: ...
+    def list(
+        self,
+        *,
+        server_id: UUID | None = None,
+        owner_id: UUID | None = None,
+        start: datetime | None = None,
+        end: datetime | None = None,
+        include_cancelled: bool = False,
+    ) -> list[PlanEntry]: ...
+
+
 class AuditRepositoryPort(Protocol):
     def add(self, event: AuditEvent) -> None: ...
     def list_for_entity(self, entity_type: str, entity_id: UUID) -> list[AuditEvent]: ...
@@ -62,6 +78,9 @@ class UnitOfWork(Protocol):
 
     @property
     def reservations(self) -> ReservationRepositoryPort: ...
+
+    @property
+    def plans(self) -> PlanRepositoryPort: ...
 
     @property
     def audits(self) -> AuditRepositoryPort: ...

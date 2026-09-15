@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from .database import SessionFactory
 from .repositories import (
     AuditRepository,
+    PlanRepository,
     RequestRepository,
     ReservationRepository,
     ServerRepository,
@@ -18,6 +19,7 @@ class SqlAlchemyUnitOfWork:
     servers: ServerRepository
     requests: RequestRepository
     reservations: ReservationRepository
+    plans: PlanRepository
     audits: AuditRepository
 
     def __init__(self, session_factory: SessionFactory) -> None:
@@ -29,6 +31,7 @@ class SqlAlchemyUnitOfWork:
         self.servers = ServerRepository(self.session)
         self.requests = RequestRepository(self.session)
         self.reservations = ReservationRepository(self.session)
+        self.plans = PlanRepository(self.session)
         self.audits = AuditRepository(self.session)
         return self
 
