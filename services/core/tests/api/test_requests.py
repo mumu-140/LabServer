@@ -49,3 +49,21 @@ def test_conflict_preview_endpoint_returns_advisory_list(api_context: ApiContext
 
     assert preview.status_code == 200
     assert preview.json() == []
+
+
+def test_capacity_and_not_found_errors_use_stable_http_codes(api_context: ApiContext) -> None:
+    api_context.act_as(MEMBER_ID, UserRole.MEMBER)
+    payload = request_payload()
+    payload["requested_cpu_cores"] = 65
+    created = api_context.client.post("/api/v1/requests", json=payload)
+    request_id = created.json()["id"]
+
+    capacity_error = api_context.client.post(f"/api/v1/requests/{request_id}/submit")
+    missing = api_context.client.get(
+        "/api/v1/requests/00000000-0000-0000-0000-000000009999"
+    )
+
+    assert capacity_error.status_code == 409
+    assert capacity_error.json()["error"]["code"] == "capacity_exceeded"
+    assert missing.status_code == 404
+    assert missing.json()["error"]["code"] == "not_found"
