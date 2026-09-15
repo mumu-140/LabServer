@@ -76,3 +76,14 @@ class Reservation:
     source: ReservationSource
     created_at: datetime
     updated_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class AuditEvent:
+    id: UUID
+    entity_type: str
+    entity_id: UUID
+    action: str
+    actor_id: UUID | None
+    occurred_at: datetime
+    details: dict[str, object] | None = None

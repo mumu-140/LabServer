@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from labserver_core.domain.entities import (
+    AuditEvent,
     ManagedServer,
     Reservation,
     ServerCapacity,
@@ -18,7 +19,13 @@ from labserver_core.domain.entities import (
     User,
 )
 
-from .models import ManagedServerModel, ReservationModel, TaskRequestModel, UserModel
+from .models import (
+    AuditEventModel,
+    ManagedServerModel,
+    ReservationModel,
+    TaskRequestModel,
+    UserModel,
+)
 
 
 def _as_utc(value: datetime) -> datetime:
@@ -91,6 +98,18 @@ def _reservation_from_model(model: ReservationModel) -> Reservation:
         source=ReservationSource(model.source),
         created_at=_as_utc(model.created_at),
         updated_at=_as_utc(model.updated_at),
+    )
+
+
+def _audit_from_model(model: AuditEventModel) -> AuditEvent:
+    return AuditEvent(
+        id=model.id,
+        entity_type=model.entity_type,
+        entity_id=model.entity_id,
+        action=model.action,
+        actor_id=model.actor_id,
+        occurred_at=_as_utc(model.occurred_at),
+        details=model.details,
     )
 
 
@@ -205,6 +224,28 @@ class RequestRepository:
             )
         )
 
+    def save(self, task_request: TaskRequest) -> None:
+        model = self._session.get(TaskRequestModel, task_request.id)
+        if model is None:
+            raise KeyError(f"Request {task_request.id} does not exist")
+        model.title = task_request.title
+        model.project = task_request.project
+        model.preferred_server_id = task_request.preferred_server_id
+        model.planned_start = task_request.planned_start
+        model.planned_duration_minutes = task_request.planned_duration_minutes
+        model.requested_cpu_cores = task_request.requested_cpu_cores
+        model.requested_memory_gb = task_request.requested_memory_gb
+        model.requested_gpu_count = task_request.requested_gpu_count
+        model.preferred_gpu_ids = (
+            list(task_request.preferred_gpu_ids)
+            if task_request.preferred_gpu_ids is not None
+            else None
+        )
+        model.note = task_request.note
+        model.status = task_request.status.value
+        model.status_changed_by = task_request.status_changed_by
+        model.updated_at = task_request.updated_at
+
     def list_for_user(self, user_id: UUID) -> list[TaskRequest]:
         models = self._session.scalars(
             select(TaskRequestModel)
@@ -272,3 +313,32 @@ class ReservationRepository:
             .order_by(ReservationModel.start_at, ReservationModel.id)
         ).all()
         return [_reservation_from_model(model) for model in models]
+
+
+class AuditRepository:
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def add(self, event: AuditEvent) -> None:
+        self._session.add(
+            AuditEventModel(
+                id=event.id,
+                entity_type=event.entity_type,
+                entity_id=event.entity_id,
+                action=event.action,
+                actor_id=event.actor_id,
+                occurred_at=event.occurred_at,
+                details=event.details,
+            )
+        )
+
+    def list_for_entity(self, entity_type: str, entity_id: UUID) -> list[AuditEvent]:
+        models = self._session.scalars(
+            select(AuditEventModel)
+            .where(
+                AuditEventModel.entity_type == entity_type,
+                AuditEventModel.entity_id == entity_id,
+            )
+            .order_by(AuditEventModel.occurred_at, AuditEventModel.id)
+        ).all()
+        return [_audit_from_model(model) for model in models]

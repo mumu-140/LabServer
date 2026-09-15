@@ -3,7 +3,13 @@ from types import TracebackType
 from sqlalchemy.orm import Session
 
 from .database import SessionFactory
-from .repositories import RequestRepository, ReservationRepository, ServerRepository, UserRepository
+from .repositories import (
+    AuditRepository,
+    RequestRepository,
+    ReservationRepository,
+    ServerRepository,
+    UserRepository,
+)
 
 
 class SqlAlchemyUnitOfWork:
@@ -12,6 +18,7 @@ class SqlAlchemyUnitOfWork:
     servers: ServerRepository
     requests: RequestRepository
     reservations: ReservationRepository
+    audits: AuditRepository
 
     def __init__(self, session_factory: SessionFactory) -> None:
         self._session_factory = session_factory
@@ -22,6 +29,7 @@ class SqlAlchemyUnitOfWork:
         self.servers = ServerRepository(self.session)
         self.requests = RequestRepository(self.session)
         self.reservations = ReservationRepository(self.session)
+        self.audits = AuditRepository(self.session)
         return self
 
     def __exit__(

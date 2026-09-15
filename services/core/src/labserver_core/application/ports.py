@@ -4,7 +4,13 @@ from types import TracebackType
 from typing import Protocol, Self
 from uuid import UUID
 
-from labserver_core.domain.entities import ManagedServer, Reservation, TaskRequest, User
+from labserver_core.domain.entities import (
+    AuditEvent,
+    ManagedServer,
+    Reservation,
+    TaskRequest,
+    User,
+)
 
 
 class UserRepositoryPort(Protocol):
@@ -25,6 +31,7 @@ class ServerRepositoryPort(Protocol):
 class RequestRepositoryPort(Protocol):
     def get(self, request_id: UUID) -> TaskRequest | None: ...
     def add(self, task_request: TaskRequest) -> None: ...
+    def save(self, task_request: TaskRequest) -> None: ...
     def list_for_user(self, user_id: UUID) -> list[TaskRequest]: ...
     def list_all(self) -> list[TaskRequest]: ...
 
@@ -38,11 +45,17 @@ class ReservationRepositoryPort(Protocol):
     def list_window(self, start: datetime, end: datetime) -> list[Reservation]: ...
 
 
+class AuditRepositoryPort(Protocol):
+    def add(self, event: AuditEvent) -> None: ...
+    def list_for_entity(self, entity_type: str, entity_id: UUID) -> list[AuditEvent]: ...
+
+
 class UnitOfWork(Protocol):
     users: UserRepositoryPort
     servers: ServerRepositoryPort
     requests: RequestRepositoryPort
     reservations: ReservationRepositoryPort
+    audits: AuditRepositoryPort
 
     def __enter__(self) -> Self: ...
     def __exit__(
