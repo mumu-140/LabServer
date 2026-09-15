@@ -10,26 +10,6 @@ class UserRole(StrEnum):
     MEMBER = "member"
 
 
-class TaskRequestStatus(StrEnum):
-    DRAFT = "draft"
-    SUBMITTED = "submitted"
-    APPROVED = "approved"
-    REJECTED = "rejected"
-    CANCELLED = "cancelled"
-
-
-class ReservationStatus(StrEnum):
-    PLANNED = "planned"
-    ACTIVE = "active"
-    COMPLETED = "completed"
-    CANCELLED = "cancelled"
-
-
-class ReservationSource(StrEnum):
-    REQUEST = "request"
-    ADMIN = "admin"
-
-
 class ConflictCertainty(StrEnum):
     CONFIRMED = "confirmed"
     UNCERTAIN = "uncertain"

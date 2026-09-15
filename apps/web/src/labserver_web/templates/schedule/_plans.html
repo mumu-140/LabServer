@@ -1,0 +1,39 @@
+{% for group in groups %}
+<article class="server-group">
+  <h2>{{ group.server.display_name }} <span class="server-key">({{ group.server.key }})</span></h2>
+  {% if group.rows %}
+  <table class="plans">
+    <thead>
+      <tr><th>When</th><th>Who</th><th>Planned use</th><th>Resources</th><th>Status</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for row in group.rows %}
+      <tr>
+        <td class="when">{{ row.window }}</td>
+        <td>{{ row.owner }}</td>
+        <td>
+          {{ row.plan.title }}
+          {% if row.plan.project %}<span class="project">({{ row.plan.project }})</span>{% endif %}
+          {% if row.overlap %}<span class="overlap-warning">Overlap warning</span>{% endif %}
+        </td>
+        <td class="resources">{{ row.resources or "not declared" }}</td>
+        <td><span class="display-state state-{{ row.plan.display_state.value }}">{{ row.plan.display_state.value }}</span></td>
+        <td>
+          {% if row.plan.cancelled_at is none %}
+          <form method="post" action="/schedule/{{ row.plan.id }}/cancel">
+            <button type="submit" class="cancel">Cancel</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">No planned use for this view yet.</p>
+  {% endif %}
+</article>
+{% endfor %}
+{% if not groups %}
+<p class="empty">No servers are registered yet.</p>
+{% endif %}

@@ -1,0 +1,40 @@
+<form class="planned-use-form" method="post" action="/schedule">
+  <label>Server
+    <select name="server_key" required>
+      {% for item in servers %}
+      <option value="{{ item.key }}">{{ item.key }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Title
+    <input name="title" required maxlength="200" placeholder="What will you run?" />
+  </label>
+  <label>Project
+    <input name="project" maxlength="200" placeholder="optional" />
+  </label>
+  <label>Date
+    <input type="date" name="date" value="{{ date }}" />
+  </label>
+  <label>Starts at
+    <input type="datetime-local" name="start_at" required />
+  </label>
+  <label>Ends at
+    <input type="datetime-local" name="end_at" required />
+  </label>
+  <label>CPU cores
+    <input type="number" name="cpu_cores" min="1" placeholder="optional" />
+  </label>
+  <label>Memory (GB)
+    <input type="number" name="memory_gb" min="0" step="0.5" placeholder="optional" />
+  </label>
+  <label>GPU count
+    <input type="number" name="gpu_count" min="0" placeholder="optional" />
+  </label>
+  <label>GPU IDs
+    <input name="gpu_ids" placeholder="e.g. 0,1 (optional)" />
+  </label>
+  <label>Note
+    <input name="note" maxlength="2000" placeholder="optional" />
+  </label>
+  <button type="submit">Publish planned use</button>
+</form>

@@ -8,7 +8,7 @@ LabServer is a lightweight internal research-lab server coordination system. It 
 
 1. infrastructure visibility;
 2. current user workload visibility;
-3. human-entered resource requests and plans;
+3. human-entered plans (published intent);
 4. plan-vs-actual reconciliation;
 5. simple usage/availability reporting.
 
@@ -41,21 +41,21 @@ Do not parse human-formatted `ps`, `top`, or `nvidia-smi` output when a stable l
 
 ### Task planning
 
-Users create resource requests with fields such as task name, requested server, planned start, planned duration, CPU, memory, GPU count and optional GPU IDs, project, and notes.
+Users publish plan entries with fields such as title, server, start and end (UTC window), CPU, memory, GPU count and optional GPU IDs, project, and notes. Publishing is not gated.
 
-Request and reservation/plan are distinct concepts. A request can be approved into a reservation. Small-lab deployments may enable auto-approval.
+A plan entry is the single published planning concept. It is never gated, queued, or converted into another artifact.
 
 V1 provides conflict detection and warnings but is not responsible for dispatching, blocking, killing, or enforcing workloads.
 
 ### Plan vs actual
 
-A core differentiator is reconciling declared reservations with observed runtime activity. The system should identify:
+A core differentiator is reconciling declared plans with observed runtime activity. The system should identify:
 - planned activity that appears to be running;
 - planned activity that has not started;
 - observed activity with no matching plan;
 - resource/time overruns.
 
-Reconciliation must be explainable and must not silently mutate reservations.
+Reconciliation must be explainable and must not silently mutate plans.
 
 ### Persistence
 
@@ -76,13 +76,12 @@ Initial user-facing surfaces:
 - Dashboard
 - Servers
 - Running
-- Requests
 - Schedule
 - Statistics
 
 Initial roles:
-- `admin`: manages servers, members, approvals, and plan corrections.
-- `member`: views shared status/schedule, creates requests, and manages own requests where permitted.
+- `admin`: manages servers, members, and plan corrections.
+- `member`: views the shared schedule, publishes plans, and manages own plans.
 
 ## Non-goals for V1
 

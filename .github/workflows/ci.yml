@@ -21,5 +21,5 @@ jobs:
           python-version: "3.13"
       - run: uv sync --all-packages --dev --locked
       - run: uv run ruff check .
-      - run: uv run mypy services/core/src packages/contracts/src
+      - run: uv run mypy services/core/src packages/contracts/src apps/web/src
       - run: uv run pytest -q

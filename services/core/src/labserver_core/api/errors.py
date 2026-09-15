@@ -7,7 +7,6 @@ from labserver_core.domain.errors import (
     DomainError,
     DomainValidationError,
     Forbidden,
-    InvalidTransition,
     NotFound,
     ServerDisabled,
 )
@@ -22,7 +21,7 @@ def _domain_status(error: DomainError) -> int:
         return status.HTTP_403_FORBIDDEN
     if isinstance(error, NotFound):
         return status.HTTP_404_NOT_FOUND
-    if isinstance(error, (InvalidTransition, ServerDisabled, CapacityExceeded)):
+    if isinstance(error, (ServerDisabled, CapacityExceeded)):
         return status.HTTP_409_CONFLICT
     if isinstance(error, DomainValidationError):
         return status.HTTP_422_UNPROCESSABLE_CONTENT

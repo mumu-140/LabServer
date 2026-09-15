@@ -6,10 +6,10 @@ from uuid import UUID
 from labserver_contracts.common import (
     ConflictCertainty,
     ConflictResource,
-    ReservationStatus,
 )
+from labserver_contracts.plans import PlanDisplayState
 
-from .entities import Reservation, ServerCapacity
+from .entities import PlanEntry, ServerCapacity
 
 NumericOrDevices = float | tuple[int, ...]
 
@@ -22,24 +22,31 @@ class Conflict:
     end_at: datetime
     requested: NumericOrDevices
     available: NumericOrDevices | None
-    conflicting_reservation_ids: tuple[UUID, ...]
+    conflicting_plan_ids: tuple[UUID, ...]
     reason: str
+
+
+def plan_display_state(plan: PlanEntry, now: datetime) -> PlanDisplayState:
+    """Display state is derived from time only; it is never persisted."""
+    if plan.cancelled_at is not None:
+        return PlanDisplayState.CANCELLED
+    if now < plan.start_at:
+        return PlanDisplayState.UPCOMING
+    if now < plan.end_at:
+        return PlanDisplayState.ONGOING
+    return PlanDisplayState.PAST
 
 
 def _overlaps(start_a: datetime, end_a: datetime, start_b: datetime, end_b: datetime) -> bool:
     return start_a < end_b and end_a > start_b
 
 
-def _active_for_segment(
-    reservation: Reservation,
-    start_at: datetime,
-    end_at: datetime,
-) -> bool:
-    return reservation.start_at < end_at and reservation.end_at > start_at
+def _active_for_segment(plan: PlanEntry, start_at: datetime, end_at: datetime) -> bool:
+    return plan.start_at < end_at and plan.end_at > start_at
 
 
-def _ids(reservations: Sequence[Reservation]) -> tuple[UUID, ...]:
-    return tuple(sorted((reservation.id for reservation in reservations), key=str))
+def _ids(plans: Sequence[PlanEntry]) -> tuple[UUID, ...]:
+    return tuple(sorted((plan.id for plan in plans), key=str))
 
 
 def _capacity_conflict(
@@ -50,7 +57,7 @@ def _capacity_conflict(
     candidate_requested: float,
     existing_requested: float,
     capacity: float | None,
-    conflicting: Sequence[Reservation],
+    conflicting: Sequence[PlanEntry],
 ) -> Conflict | None:
     if capacity is None or candidate_requested <= 0:
         return None
@@ -65,7 +72,7 @@ def _capacity_conflict(
         end_at=end_at,
         requested=candidate_requested,
         available=available,
-        conflicting_reservation_ids=_ids(conflicting),
+        conflicting_plan_ids=_ids(conflicting),
         reason=(
             f"Requested {resource.value} capacity {candidate_requested:g} exceeds "
             f"the {available:g} available during this interval"
@@ -73,9 +80,16 @@ def _capacity_conflict(
     )
 
 
+def _declared_gpu_count(plan: PlanEntry) -> int:
+    """Undeclared GPU intent is *not declared*, never 0 usage of a known amount."""
+    if plan.gpu_ids is not None:
+        return len(plan.gpu_ids)
+    return plan.gpu_count or 0
+
+
 def _device_conflicts(
-    candidate: Reservation,
-    active: Sequence[Reservation],
+    candidate: PlanEntry,
+    active: Sequence[PlanEntry],
     start_at: datetime,
     end_at: datetime,
 ) -> list[Conflict]:
@@ -83,20 +97,20 @@ def _device_conflicts(
         return []
 
     candidate_ids = set(candidate.gpu_ids)
-    confirmed_reservations: list[Reservation] = []
+    confirmed_plans: list[PlanEntry] = []
     confirmed_devices: set[int] = set()
-    uncertain_reservations: list[Reservation] = []
+    uncertain_plans: list[PlanEntry] = []
 
-    for reservation in active:
-        if reservation.gpu_count <= 0:
+    for plan in active:
+        if _declared_gpu_count(plan) <= 0:
             continue
-        if reservation.gpu_ids is None:
-            uncertain_reservations.append(reservation)
+        if plan.gpu_ids is None:
+            uncertain_plans.append(plan)
             continue
 
-        overlap = candidate_ids.intersection(reservation.gpu_ids)
+        overlap = candidate_ids.intersection(plan.gpu_ids)
         if overlap:
-            confirmed_reservations.append(reservation)
+            confirmed_plans.append(plan)
             confirmed_devices.update(overlap)
 
     conflicts: list[Conflict] = []
@@ -110,15 +124,15 @@ def _device_conflicts(
                 end_at=end_at,
                 requested=devices,
                 available=(),
-                conflicting_reservation_ids=_ids(confirmed_reservations),
+                conflicting_plan_ids=_ids(confirmed_plans),
                 reason=(
-                    "Explicit GPU device reservation overlaps on device(s): "
+                    "Explicit GPU device plan overlaps on device(s): "
                     + ", ".join(str(device) for device in devices)
                 ),
             )
         )
 
-    if uncertain_reservations:
+    if uncertain_plans:
         conflicts.append(
             Conflict(
                 resource=ConflictResource.GPU_DEVICE,
@@ -127,9 +141,9 @@ def _device_conflicts(
                 end_at=end_at,
                 requested=tuple(sorted(candidate_ids)),
                 available=None,
-                conflicting_reservation_ids=_ids(uncertain_reservations),
+                conflicting_plan_ids=_ids(uncertain_plans),
                 reason=(
-                    "Candidate requests explicit GPU device(s), but overlapping reservation(s) "
+                    "Candidate declares explicit GPU device(s), but overlapping plan(s) "
                     "do not declare device IDs"
                 ),
             )
@@ -144,7 +158,7 @@ def _same_conflict_shape(left: Conflict, right: Conflict) -> bool:
         and left.certainty is right.certainty
         and left.requested == right.requested
         and left.available == right.available
-        and left.conflicting_reservation_ids == right.conflicting_reservation_ids
+        and left.conflicting_plan_ids == right.conflicting_plan_ids
         and left.reason == right.reason
         and left.end_at == right.start_at
     )
@@ -161,7 +175,7 @@ def _coalesce(conflicts: Sequence[Conflict]) -> list[Conflict]:
             item.end_at,
             item.resource.value,
             item.certainty.value,
-            tuple(str(value) for value in item.conflicting_reservation_ids),
+            tuple(str(value) for value in item.conflicting_plan_ids),
         ),
     )
     merged: list[Conflict] = []
@@ -184,56 +198,50 @@ def _coalesce(conflicts: Sequence[Conflict]) -> list[Conflict]:
     )
 
 
-def evaluate_conflicts(
-    candidate: Reservation,
-    existing: Sequence[Reservation],
+def evaluate_plan_conflicts(
+    candidate: PlanEntry,
+    existing: Sequence[PlanEntry],
     capacity: ServerCapacity,
-) -> list[Conflict]:
-    if candidate.status is ReservationStatus.CANCELLED or candidate.start_at >= candidate.end_at:
-        return []
+) -> tuple[Conflict, ...]:
+    """Advisory overlap evaluation. Never blocks creating or updating a plan."""
+    if candidate.cancelled_at is not None or candidate.start_at >= candidate.end_at:
+        return ()
 
     relevant = [
-        reservation
-        for reservation in existing
-        if reservation.id != candidate.id
-        and reservation.server_id == candidate.server_id
-        and reservation.status is not ReservationStatus.CANCELLED
-        and reservation.start_at < reservation.end_at
-        and _overlaps(
-            candidate.start_at,
-            candidate.end_at,
-            reservation.start_at,
-            reservation.end_at,
-        )
+        plan
+        for plan in existing
+        if plan.id != candidate.id
+        and plan.server_id == candidate.server_id
+        and plan.cancelled_at is None
+        and plan.start_at < plan.end_at
+        and _overlaps(candidate.start_at, candidate.end_at, plan.start_at, plan.end_at)
     ]
     if not relevant:
-        return []
+        return ()
 
     boundaries = {candidate.start_at, candidate.end_at}
-    for reservation in relevant:
-        boundaries.add(max(candidate.start_at, reservation.start_at))
-        boundaries.add(min(candidate.end_at, reservation.end_at))
+    for plan in relevant:
+        boundaries.add(max(candidate.start_at, plan.start_at))
+        boundaries.add(min(candidate.end_at, plan.end_at))
     ordered_boundaries = sorted(boundaries)
 
     conflicts: list[Conflict] = []
     for start_at, end_at in zip(ordered_boundaries, ordered_boundaries[1:], strict=False):
         if start_at >= end_at:
             continue
-        active = [
-            reservation
-            for reservation in relevant
-            if _active_for_segment(reservation, start_at, end_at)
-        ]
+        active = [plan for plan in relevant if _active_for_segment(plan, start_at, end_at)]
         if not active:
             continue
 
-        cpu_consumers = [reservation for reservation in active if reservation.cpu_cores > 0]
+        cpu_consumers = [
+            plan for plan in active if plan.cpu_cores is not None and plan.cpu_cores > 0
+        ]
         cpu_conflict = _capacity_conflict(
             resource=ConflictResource.CPU,
             start_at=start_at,
             end_at=end_at,
-            candidate_requested=float(candidate.cpu_cores),
-            existing_requested=float(sum(item.cpu_cores for item in cpu_consumers)),
+            candidate_requested=float(candidate.cpu_cores or 0),
+            existing_requested=float(sum(plan.cpu_cores or 0 for plan in cpu_consumers)),
             capacity=float(capacity.cpu_cores) if capacity.cpu_cores is not None else None,
             conflicting=cpu_consumers,
         )
@@ -241,29 +249,27 @@ def evaluate_conflicts(
             conflicts.append(cpu_conflict)
 
         memory_consumers = [
-            reservation
-            for reservation in active
-            if reservation.memory_gb is not None and reservation.memory_gb > 0
+            plan for plan in active if plan.memory_gb is not None and plan.memory_gb > 0
         ]
         memory_conflict = _capacity_conflict(
             resource=ConflictResource.MEMORY,
             start_at=start_at,
             end_at=end_at,
             candidate_requested=float(candidate.memory_gb or 0.0),
-            existing_requested=float(sum(item.memory_gb or 0.0 for item in memory_consumers)),
+            existing_requested=float(sum(plan.memory_gb or 0.0 for plan in memory_consumers)),
             capacity=float(capacity.memory_gb) if capacity.memory_gb is not None else None,
             conflicting=memory_consumers,
         )
         if memory_conflict is not None:
             conflicts.append(memory_conflict)
 
-        gpu_consumers = [reservation for reservation in active if reservation.gpu_count > 0]
+        gpu_consumers = [plan for plan in active if _declared_gpu_count(plan) > 0]
         gpu_conflict = _capacity_conflict(
             resource=ConflictResource.GPU,
             start_at=start_at,
             end_at=end_at,
-            candidate_requested=float(candidate.gpu_count),
-            existing_requested=float(sum(item.gpu_count for item in gpu_consumers)),
+            candidate_requested=float(_declared_gpu_count(candidate)),
+            existing_requested=float(sum(_declared_gpu_count(plan) for plan in gpu_consumers)),
             capacity=float(capacity.gpu_count) if capacity.gpu_count is not None else None,
             conflicting=gpu_consumers,
         )
@@ -272,4 +278,4 @@ def evaluate_conflicts(
 
         conflicts.extend(_device_conflicts(candidate, active, start_at, end_at))
 
-    return _coalesce(conflicts)
+    return tuple(_coalesce(conflicts))

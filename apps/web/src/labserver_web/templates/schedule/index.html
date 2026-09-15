@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Schedule — LabServer{% endblock %}
+{% block content %}
+<h1>Schedule</h1>
+<p class="lede">Planned use: who intends to work on which server, and when.</p>
+
+<form class="filters" method="get" action="/schedule">
+  <label>Server
+    <select name="server">
+      <option value="">All servers</option>
+      {% for item in servers %}
+      <option value="{{ item.key }}" {% if item.key == server_key %}selected{% endif %}>{{ item.key }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Date
+    <input type="date" name="date" value="{{ date }}" />
+  </label>
+  <button type="submit">Filter</button>
+  <a class="clear" href="/schedule">Clear</a>
+</form>
+
+{% if form_error %}
+<p class="error" role="alert">{{ form_error }}</p>
+{% endif %}
+
+<section id="plans" aria-label="Planned use">
+  {% include "schedule/_plans.html" %}
+</section>
+
+<section class="add-planned-use" aria-label="Add planned use">
+  <h2>Add planned use</h2>
+  {% include "schedule/_form.html" %}
+</section>
+{% endblock %}

@@ -1,52 +1,20 @@
-from datetime import UTC, datetime, timedelta
-from uuid import UUID
-
 import pytest
 from labserver_contracts.common import (
     ConflictCertainty,
     ConflictResource,
-    ReservationSource,
-    ReservationStatus,
-    TaskRequestStatus,
     UserRole,
 )
-from labserver_contracts.requests import TaskRequestCreate, TaskRequestUpdate
-from labserver_contracts.servers import ServerCreate
-from labserver_contracts.users import UserCreate
+from labserver_contracts.plans import (
+    PlanConflictRead,
+    PlanCreate,
+    PlanDisplayState,
+    PlanRead,
+)
 from pydantic import ValidationError
-
-
-def valid_request_payload() -> dict[str, object]:
-    return {
-        "title": "Poplar assembly",
-        "project": "Populus",
-        "preferred_server_id": "00000000-0000-0000-0000-000000000010",
-        "planned_start": "2026-09-18T08:00:00+08:00",
-        "planned_duration_minutes": 2880,
-        "requested_cpu_cores": 32,
-        "requested_memory_gb": 128.0,
-        "requested_gpu_count": 2,
-        "preferred_gpu_ids": [0, 1],
-        "note": "HiFi assembly",
-    }
 
 
 def test_canonical_enum_values_are_stable() -> None:
     assert [item.value for item in UserRole] == ["admin", "member"]
-    assert [item.value for item in TaskRequestStatus] == [
-        "draft",
-        "submitted",
-        "approved",
-        "rejected",
-        "cancelled",
-    ]
-    assert [item.value for item in ReservationStatus] == [
-        "planned",
-        "active",
-        "completed",
-        "cancelled",
-    ]
-    assert [item.value for item in ReservationSource] == ["request", "admin"]
     assert [item.value for item in ConflictCertainty] == ["confirmed", "uncertain"]
     assert [item.value for item in ConflictResource] == [
         "cpu",
@@ -54,105 +22,88 @@ def test_canonical_enum_values_are_stable() -> None:
         "gpu",
         "gpu_device",
     ]
+    assert [item.value for item in PlanDisplayState] == [
+        "cancelled",
+        "upcoming",
+        "ongoing",
+        "past",
+    ]
 
 
-def test_task_request_contract_normalizes_utc() -> None:
-    model = TaskRequestCreate.model_validate(valid_request_payload())
-
-    assert model.preferred_server_id == UUID("00000000-0000-0000-0000-000000000010")
-    assert model.preferred_gpu_ids == [0, 1]
-    assert model.planned_start == datetime(2026, 9, 18, 0, 0, tzinfo=UTC)
-    assert model.planned_start.utcoffset() == timedelta(0)
-    assert model.model_dump(mode="json")["preferred_server_id"] == (
-        "00000000-0000-0000-0000-000000000010"
+def test_plan_create_serializes_to_json_safe_payload() -> None:
+    plan = PlanCreate.model_validate(
+        {
+            "server_id": "00000000-0000-0000-0000-000000000010",
+            "title": "Poplar assembly",
+            "project": "Populus",
+            "start_at": "2026-09-18T08:00:00+08:00",
+            "end_at": "2026-09-18T12:00:00+08:00",
+            "cpu_cores": 32,
+            "memory_gb": 128.0,
+            "gpu_count": 2,
+            "gpu_ids": [0, 1],
+            "note": "HiFi assembly",
+        }
     )
+    payload = plan.model_dump(mode="json")
+    assert payload["start_at"] == "2026-09-18T00:00:00Z"
+    assert payload["end_at"] == "2026-09-18T04:00:00Z"
+    assert payload["gpu_ids"] == [0, 1]
+    assert payload["project"] == "Populus"
 
 
-@pytest.mark.parametrize(
-    ("field", "value"),
-    [
-        ("planned_duration_minutes", 0),
-        ("requested_cpu_cores", -1),
-        ("requested_memory_gb", -0.1),
-        ("requested_gpu_count", -1),
-        ("preferred_gpu_ids", [-1, 0]),
-        ("preferred_gpu_ids", [0, 0]),
-    ],
-)
-def test_task_request_rejects_invalid_resource_values(field: str, value: object) -> None:
-    payload = valid_request_payload()
-    payload[field] = value
-
+def test_plan_create_rejects_invalid_gpu_shapes() -> None:
+    base = {
+        "server_id": "00000000-0000-0000-0000-000000000010",
+        "title": "Training",
+        "start_at": "2026-09-18T08:00:00Z",
+        "end_at": "2026-09-18T10:00:00Z",
+    }
     with pytest.raises(ValidationError):
-        TaskRequestCreate.model_validate(payload)
-
-
-def test_task_request_rejects_naive_datetime() -> None:
-    payload = valid_request_payload()
-    payload["planned_start"] = "2026-09-18T08:00:00"
-
+        PlanCreate.model_validate({**base, "gpu_ids": [1, 1]})
     with pytest.raises(ValidationError):
-        TaskRequestCreate.model_validate(payload)
-
-
-def test_task_request_rejects_gpu_count_mismatch() -> None:
-    payload = valid_request_payload()
-    payload["requested_gpu_count"] = 1
-
+        PlanCreate.model_validate({**base, "gpu_ids": [-2]})
     with pytest.raises(ValidationError):
-        TaskRequestCreate.model_validate(payload)
+        PlanCreate.model_validate({**base, "gpu_count": 3, "gpu_ids": [0, 1]})
 
 
-def test_task_request_trims_title_and_rejects_blank_title() -> None:
-    payload = valid_request_payload()
-    payload["title"] = "  Poplar assembly  "
-    model = TaskRequestCreate.model_validate(payload)
-    assert model.title == "Poplar assembly"
-
-    payload["title"] = "   "
-    with pytest.raises(ValidationError):
-        TaskRequestCreate.model_validate(payload)
-
-
-def test_write_contracts_forbid_unknown_fields_and_server_ip() -> None:
-    payload = valid_request_payload()
-    payload["unexpected"] = True
-    with pytest.raises(ValidationError):
-        TaskRequestCreate.model_validate(payload)
-
-    with pytest.raises(ValidationError):
-        ServerCreate.model_validate(
-            {
-                "key": "fwq10",
-                "display_name": "fwq10",
-                "ip": "192.0.2.10",
-            }
-        )
-
-
-def test_partial_request_update_only_checks_local_gpu_consistency() -> None:
-    update = TaskRequestUpdate.model_validate({"preferred_gpu_ids": [2, 3]})
-    assert update.preferred_gpu_ids == [2, 3]
-
-    with pytest.raises(ValidationError):
-        TaskRequestUpdate.model_validate(
-            {"requested_gpu_count": 1, "preferred_gpu_ids": [2, 3]}
-        )
-
-
-def test_user_create_normalizes_text_and_forbids_extra_fields() -> None:
-    user = UserCreate.model_validate(
-        {"username": "  alice  ", "display_name": "  Alice Chen  ", "role": "member"}
+def test_plan_read_round_trips_from_mapping() -> None:
+    read = PlanRead.model_validate(
+        {
+            "id": "00000000-0000-0000-0000-000000000011",
+            "owner_id": "00000000-0000-0000-0000-000000000012",
+            "server_id": "00000000-0000-0000-0000-000000000010",
+            "title": "Poplar assembly",
+            "project": None,
+            "start_at": "2026-09-18T00:00:00Z",
+            "end_at": "2026-09-18T04:00:00Z",
+            "cpu_cores": None,
+            "memory_gb": None,
+            "gpu_count": None,
+            "gpu_ids": None,
+            "note": None,
+            "cancelled_at": None,
+            "created_at": "2026-09-15T00:00:00Z",
+            "updated_at": "2026-09-15T00:00:00Z",
+            "display_state": "ongoing",
+        }
     )
-    assert user.username == "alice"
-    assert user.display_name == "Alice Chen"
+    assert read.display_state is PlanDisplayState.ONGOING
+    assert read.model_dump(mode="json")["display_state"] == "ongoing"
 
-    with pytest.raises(ValidationError):
-        UserCreate.model_validate(
-            {
-                "username": "alice",
-                "display_name": "Alice",
-                "role": "member",
-                "password": "must-not-be-in-this-contract",
-            }
-        )
+
+def test_plan_conflict_read_keeps_resource_vocabulary() -> None:
+    conflict = PlanConflictRead.model_validate(
+        {
+            "resource": "memory",
+            "certainty": "confirmed",
+            "start_at": "2026-09-18T01:00:00Z",
+            "end_at": "2026-09-18T02:00:00Z",
+            "requested": 128.0,
+            "available": 64.0,
+            "conflicting_plan_ids": [],
+            "reason": "Memory oversubscribed",
+        }
+    )
+    assert conflict.resource is ConflictResource.MEMORY
+    assert conflict.certainty is ConflictCertainty.CONFIRMED

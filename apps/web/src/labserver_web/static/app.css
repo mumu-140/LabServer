@@ -1,0 +1,113 @@
+:root {
+  color-scheme: light dark;
+  --ink: #1d2430;
+  --muted: #667085;
+  --line: #d7dce5;
+  --warn-bg: #fff3cd;
+  --warn-ink: #7a5b00;
+}
+
+body {
+  margin: 0;
+  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: #f7f8fa;
+}
+
+.site-header {
+  padding: 12px 24px;
+  background: #ffffff;
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  font-weight: 650;
+  text-decoration: none;
+  color: inherit;
+}
+
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+h1 { margin: 0 0 4px; font-size: 24px; }
+h2 { font-size: 17px; margin: 24px 0 8px; }
+.lede { color: var(--muted); margin-top: 0; }
+
+.filters {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  margin: 16px 0;
+  flex-wrap: wrap;
+}
+
+.filters label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.filters .clear { align-self: end; color: var(--muted); }
+
+.server-group { background: #ffffff; border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; margin: 16px 0; }
+.server-key { color: var(--muted); font-weight: 400; font-size: 14px; }
+
+table.plans { width: 100%; border-collapse: collapse; }
+table.plans th { text-align: left; font-size: 12.5px; color: var(--muted); border-bottom: 1px solid var(--line); padding: 6px 8px; }
+table.plans td { padding: 8px; border-bottom: 1px solid #edf0f4; vertical-align: top; }
+td.when { white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+.overlap-warning {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+  font-size: 12.5px;
+}
+
+.display-state { font-size: 12.5px; color: var(--muted); }
+.state-cancelled { text-decoration: line-through; }
+.state-ongoing { color: #166534; font-weight: 600; }
+
+.empty { color: var(--muted); }
+
+.planned-use-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.planned-use-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.planned-use-form input, .planned-use-form select {
+  font: inherit;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+button {
+  font: inherit;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  cursor: pointer;
+}
+button.cancel { padding: 3px 10px; font-size: 13px; }
+button[type="submit"] { background: #1d4ed8; border-color: #1d4ed8; color: #ffffff; }
+
+.error {
+  background: #fde8e8;
+  color: #8a1f2d;
+  border: 1px solid #f5c2c7;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
