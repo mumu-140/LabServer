@@ -226,3 +226,59 @@ def test_display_state_cancelled_wins_over_time() -> None:
 
     assert plan_display_state(entry, dt(11)) is PlanDisplayState.CANCELLED
     assert plan_display_state(entry, dt(13)) is PlanDisplayState.CANCELLED
+
+
+def test_candidate_alone_gpu_over_capacity_warns() -> None:
+    candidate = plan(start_at=dt(10), end_at=dt(12), gpu_count=6)
+
+    conflicts = evaluate_plan_conflicts(candidate, [], capacity(gpu_count=4))
+    gpu = next(item for item in conflicts if item.resource is ConflictResource.GPU)
+
+    assert gpu.requested == 6.0
+    assert gpu.available == 4.0
+    assert gpu.conflicting_plan_ids == ()
+
+
+def test_candidate_alone_cpu_over_capacity_warns() -> None:
+    candidate = plan(start_at=dt(10), end_at=dt(12), cpu_cores=96)
+
+    conflicts = evaluate_plan_conflicts(candidate, [], capacity(cpu_cores=64))
+
+    assert {item.resource for item in conflicts} == {ConflictResource.CPU}
+
+
+def test_candidate_alone_memory_over_capacity_warns() -> None:
+    candidate = plan(start_at=dt(10), end_at=dt(12), memory_gb=384.0)
+
+    conflicts = evaluate_plan_conflicts(candidate, [], capacity(memory_gb=256.0))
+
+    assert {item.resource for item in conflicts} == {ConflictResource.MEMORY}
+
+
+def test_explicit_gpu_id_outside_known_range_warns() -> None:
+    candidate = plan(start_at=dt(10), end_at=dt(12), gpu_count=1, gpu_ids=(7,))
+
+    conflicts = evaluate_plan_conflicts(candidate, [], capacity(gpu_count=4))
+    device = next(item for item in conflicts if item.resource is ConflictResource.GPU_DEVICE)
+
+    assert device.requested == (7,)
+    assert device.available == (0, 1, 2, 3)
+    assert device.conflicting_plan_ids == ()
+
+
+def test_candidate_alone_unknown_capacity_does_not_warn() -> None:
+    candidate = plan(
+        start_at=dt(10),
+        end_at=dt(12),
+        cpu_cores=96,
+        memory_gb=384.0,
+        gpu_count=6,
+    )
+
+    conflicts = evaluate_plan_conflicts(
+        candidate,
+        [],
+        capacity(cpu_cores=None, memory_gb=None, gpu_count=None),
+    )
+
+    assert conflicts == ()

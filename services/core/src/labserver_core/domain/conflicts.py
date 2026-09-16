@@ -198,6 +198,30 @@ def _coalesce(conflicts: Sequence[Conflict]) -> list[Conflict]:
     )
 
 
+def _invalid_candidate_gpu_devices(
+    candidate: PlanEntry,
+    capacity: ServerCapacity,
+) -> Conflict | None:
+    if candidate.gpu_ids is None or capacity.gpu_count is None:
+        return None
+
+    valid = tuple(range(capacity.gpu_count))
+    invalid = tuple(sorted(device for device in candidate.gpu_ids if device >= capacity.gpu_count))
+    if not invalid:
+        return None
+
+    return Conflict(
+        resource=ConflictResource.GPU_DEVICE,
+        certainty=ConflictCertainty.CONFIRMED,
+        start_at=candidate.start_at,
+        end_at=candidate.end_at,
+        requested=invalid,
+        available=valid,
+        conflicting_plan_ids=(),
+        reason="Explicit GPU device plan references device(s) outside declared server capacity",
+    )
+
+
 def evaluate_plan_conflicts(
     candidate: PlanEntry,
     existing: Sequence[PlanEntry],
@@ -216,9 +240,9 @@ def evaluate_plan_conflicts(
         and plan.start_at < plan.end_at
         and _overlaps(candidate.start_at, candidate.end_at, plan.start_at, plan.end_at)
     ]
-    if not relevant:
-        return ()
 
+    # Standalone overcommit is still advisory: evaluate the candidate interval
+    # even when no existing plan overlaps, with zero existing usage.
     boundaries = {candidate.start_at, candidate.end_at}
     for plan in relevant:
         boundaries.add(max(candidate.start_at, plan.start_at))
@@ -230,8 +254,6 @@ def evaluate_plan_conflicts(
         if start_at >= end_at:
             continue
         active = [plan for plan in relevant if _active_for_segment(plan, start_at, end_at)]
-        if not active:
-            continue
 
         cpu_consumers = [
             plan for plan in active if plan.cpu_cores is not None and plan.cpu_cores > 0
@@ -277,5 +299,9 @@ def evaluate_plan_conflicts(
             conflicts.append(gpu_conflict)
 
         conflicts.extend(_device_conflicts(candidate, active, start_at, end_at))
+
+    invalid_devices = _invalid_candidate_gpu_devices(candidate, capacity)
+    if invalid_devices is not None:
+        conflicts.append(invalid_devices)
 
     return tuple(_coalesce(conflicts))
