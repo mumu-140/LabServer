@@ -2,39 +2,39 @@
   <label>Server
     <select name="server_key" required>
       {% for item in servers %}
-      <option value="{{ item.key }}">{{ item.key }}</option>
+      <option value="{{ item.key }}" {% if item.key == form.server_key %}selected{% endif %}>{{ item.key }}</option>
       {% endfor %}
     </select>
   </label>
   <label>Title
-    <input name="title" required maxlength="200" placeholder="What will you run?" />
+    <input name="title" required maxlength="200" placeholder="What will you run?" value="{{ form.title or "" }}" />
   </label>
   <label>Project
-    <input name="project" maxlength="200" placeholder="optional" />
+    <input name="project" maxlength="200" placeholder="optional" value="{{ form.project or "" }}" />
   </label>
   <label>Date
-    <input type="date" name="date" value="{{ date }}" />
+    <input type="date" name="date" value="{{ form.date or date }}" />
   </label>
   <label>Starts at
-    <input type="datetime-local" name="start_at" required />
+    <input type="datetime-local" name="start_at" required value="{{ form.start_at or "" }}" />
   </label>
   <label>Ends at
-    <input type="datetime-local" name="end_at" required />
+    <input type="datetime-local" name="end_at" required value="{{ form.end_at or "" }}" />
   </label>
   <label>CPU cores
-    <input type="number" name="cpu_cores" min="1" placeholder="optional" />
+    <input type="number" name="cpu_cores" min="1" placeholder="optional" value="{{ form.cpu_cores or "" }}" />
   </label>
   <label>Memory (GB)
-    <input type="number" name="memory_gb" min="0" step="0.5" placeholder="optional" />
+    <input type="number" name="memory_gb" min="0" step="0.5" placeholder="optional" value="{{ form.memory_gb or "" }}" />
   </label>
   <label>GPU count
-    <input type="number" name="gpu_count" min="0" placeholder="optional" />
+    <input type="number" name="gpu_count" min="0" placeholder="optional" value="{{ form.gpu_count or "" }}" />
   </label>
   <label>GPU IDs
-    <input name="gpu_ids" placeholder="e.g. 0,1 (optional)" />
+    <input name="gpu_ids" placeholder="e.g. 0,1 (optional)" value="{{ form.gpu_ids or "" }}" />
   </label>
   <label>Note
-    <input name="note" maxlength="2000" placeholder="optional" />
+    <input name="note" maxlength="2000" placeholder="optional" value="{{ form.note or "" }}" />
   </label>
   <button type="submit">Publish planned use</button>
 </form>

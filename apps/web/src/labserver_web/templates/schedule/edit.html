@@ -10,10 +10,10 @@
 
 <form class="planned-use-form" method="post" action="/schedule/{{ plan.id }}/edit">
   <label>Title
-    <input name="title" required maxlength="200" value="{{ plan.title }}" />
+    <input name="title" required maxlength="200" value="{{ title_value }}" />
   </label>
   <label>Project
-    <input name="project" maxlength="200" value="{{ plan.project or "" }}" />
+    <input name="project" maxlength="200" value="{{ project_value }}" />
   </label>
   <label>Starts at
     <input type="datetime-local" name="start_at" required value="{{ start_value }}" />
@@ -22,19 +22,19 @@
     <input type="datetime-local" name="end_at" required value="{{ end_value }}" />
   </label>
   <label>CPU cores
-    <input type="number" name="cpu_cores" min="1" value="{{ plan.cpu_cores if plan.cpu_cores is not none else "" }}" />
+    <input type="number" name="cpu_cores" min="1" value="{{ cpu_value }}" />
   </label>
   <label>Memory (GB)
-    <input type="number" name="memory_gb" min="0" step="0.5" value="{{ plan.memory_gb if plan.memory_gb is not none else "" }}" />
+    <input type="number" name="memory_gb" min="0" step="0.5" value="{{ memory_value }}" />
   </label>
   <label>GPU count
-    <input type="number" name="gpu_count" min="0" value="{{ plan.gpu_count if plan.gpu_count is not none else "" }}" />
+    <input type="number" name="gpu_count" min="0" value="{{ gpu_count_value }}" />
   </label>
   <label>GPU IDs
-    <input name="gpu_ids" value="{{ plan.gpu_ids|join(",") if plan.gpu_ids else "" }}" />
+    <input name="gpu_ids" value="{{ gpu_ids_value }}" />
   </label>
   <label>Note
-    <input name="note" maxlength="2000" value="{{ plan.note or "" }}" />
+    <input name="note" maxlength="2000" value="{{ note_value }}" />
   </label>
   <button type="submit">Save changes</button>
   <a class="clear" href="/schedule">Back</a>

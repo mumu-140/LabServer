@@ -13,6 +13,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from labserver_contracts.common import UserRole
 from labserver_contracts.plans import PlanCreate, PlanRead, PlanUpdate
+from pydantic import ValidationError
 
 from labserver_web.auth import ViewerContext, get_current_viewer
 from labserver_web.clients.core import CoreClient, CoreClientError
@@ -42,6 +43,7 @@ def _resource_text(plan: PlanRead) -> str:
     parts: list[str] = []
     if plan.cpu_cores is not None:
         parts.append(f"{plan.cpu_cores} CPU")
+    if plan.memory_gb is not None:
         parts.append(f"{plan.memory_gb:g} GB")
     if plan.gpu_ids:
         parts.append("GPU " + ", ".join(str(gpu) for gpu in plan.gpu_ids))
@@ -53,6 +55,30 @@ def _resource_text(plan: PlanRead) -> str:
 def _can_change(viewer: ViewerContext, plan: PlanRead) -> bool:
     """UX-only helper; Core stays authoritative for authorization."""
     return viewer.role is UserRole.ADMIN or viewer.user_id == plan.owner_id
+
+
+def _core_error_status(error: CoreClientError) -> int:
+    """Map a normalized Core failure to a safe HTTP status for the page."""
+    if error.status_code in (401, 403, 404, 409, 422):
+        return error.status_code
+    if 400 <= error.status_code < 500:
+        return 422
+    return 503
+
+
+def _error_page(
+    request: Request, message: str, status_code: int
+) -> Any:
+    return TEMPLATES.TemplateResponse(
+        request,
+        "schedule/error.html",
+        {"request": request, "message": message},
+        status_code=status_code,
+    )
+
+
+def _core_error_page(request: Request, error: CoreClientError) -> Any:
+    return _error_page(request, error.message, _core_error_status(error))
 
 
 def _schedule_context(
@@ -127,6 +153,7 @@ def _schedule_context(
         "timezone_name": zone.key,
         "servers": [selected] if server_key is not None else list(servers.values()),
         "users": list(users.values()),
+        "form": {},
     }
 
 
@@ -202,14 +229,17 @@ def view_schedule(
     owner: Annotated[UUID | None, Query()] = None,
     date: Annotated[str | None, Query()] = None,
 ) -> Any:
-    context = _schedule_context(
-        request,
-        core,
-        viewer,
-        server_key=server,
-        owner_id=owner,
-        day=_parse_date(date),
-    )
+    try:
+        context = _schedule_context(
+            request,
+            core,
+            viewer,
+            server_key=server,
+            owner_id=owner,
+            day=_parse_date(date),
+        )
+    except CoreClientError as error:
+        return _core_error_page(request, error)
     return TEMPLATES.TemplateResponse(request, "schedule/index.html", context)
 
 
@@ -217,7 +247,10 @@ def view_schedule(
 def edit_planned_use_form(
     plan_id: UUID, request: Request, core: CoreClientDep, viewer: ViewerDep
 ) -> Any:
-    plan = _load_changeable_plan(core, plan_id, viewer)
+    try:
+        plan = _load_changeable_plan(core, plan_id, viewer)
+    except CoreClientError as error:
+        return _core_error_page(request, error)
     if plan.cancelled_at is not None:
         raise HTTPException(status_code=409, detail="A cancelled plan cannot be edited")
     zone: ZoneInfo = request.app.state.settings.timezone
@@ -227,14 +260,43 @@ def edit_planned_use_form(
         {
             "request": request,
             "plan": plan,
-            "servers": core.list_servers(),
+            "title_value": plan.title,
+            "project_value": plan.project or "",
             "start_value": plan.start_at.astimezone(zone).strftime("%Y-%m-%dT%H:%M"),
             "end_value": plan.end_at.astimezone(zone).strftime("%Y-%m-%dT%H:%M"),
+            "cpu_value": "" if plan.cpu_cores is None else str(plan.cpu_cores),
+            "memory_value": "" if plan.memory_gb is None else str(plan.memory_gb),
+            "gpu_count_value": "" if plan.gpu_count is None else str(plan.gpu_count),
+            "gpu_ids_value": ",".join(str(gpu) for gpu in plan.gpu_ids) if plan.gpu_ids else "",
+            "note_value": plan.note or "",
             "timezone_name": zone.key,
             "form_error": None,
         },
     )
 
+
+def _edit_form_values(
+    title: str,
+    start_at: str,
+    end_at: str,
+    project: str,
+    cpu_cores: str,
+    memory_gb: str,
+    gpu_count: str,
+    gpu_ids: str,
+    note: str,
+) -> dict[str, str]:
+    return {
+        "title_value": title,
+        "project_value": project,
+        "start_value": start_at,
+        "end_value": end_at,
+        "cpu_value": cpu_cores,
+        "memory_value": memory_gb,
+        "gpu_count_value": gpu_count,
+        "gpu_ids_value": gpu_ids,
+        "note_value": note,
+    }
 
 @router.post("/schedule/{plan_id}/edit")
 def edit_planned_use(
@@ -252,43 +314,63 @@ def edit_planned_use(
     gpu_ids: Annotated[str, Form()] = "",
     note: Annotated[str, Form()] = "",
 ) -> Any:
-    plan = _load_changeable_plan(core, plan_id, viewer)
-    zone: ZoneInfo = request.app.state.settings.timezone
-    fields: dict[str, Any] = {
-        "title": title,
-        "start_at": parse_local_datetime(start_at, zone),
-        "end_at": parse_local_datetime(end_at, zone),
-    }
-    if project:
-        fields["project"] = project
-    if (cpu := _optional_int(cpu_cores)) is not None:
-        fields["cpu_cores"] = cpu
-    if (memory := _optional_float(memory_gb)) is not None:
-        fields["memory_gb"] = memory
-    if (gpu_n := _optional_int(gpu_count)) is not None:
-        fields["gpu_count"] = gpu_n
-    if (gpu_list := _optional_gpu_ids(gpu_ids)) is not None:
-        fields["gpu_ids"] = gpu_list
-    if note:
-        fields["note"] = note
     try:
-        core.update_plan(plan.id, PlanUpdate(**fields))
+        plan = _load_changeable_plan(core, plan_id, viewer)
     except CoreClientError as error:
-        return TEMPLATES.TemplateResponse(
-            request,
-            "schedule/edit.html",
-            {
-                "request": request,
-                "plan": plan,
-                "servers": core.list_servers(),
-                "start_value": start_at,
-                "end_value": end_at,
-                "timezone_name": zone.key,
-                "form_error": error.message,
-            },
-            status_code=200,
-        )
+        return _core_error_page(request, error)
+    if plan.cancelled_at is not None:
+        raise HTTPException(status_code=409, detail="A cancelled plan cannot be edited")
+    zone: ZoneInfo = request.app.state.settings.timezone
+    values = _edit_form_values(
+        title, start_at, end_at, project, cpu_cores, memory_gb, gpu_count, gpu_ids, note
+    )
+    try:
+        fields: dict[str, Any] = {
+            "title": title,
+            "start_at": parse_local_datetime(start_at, zone),
+            "end_at": parse_local_datetime(end_at, zone),
+        }
+        if project:
+            fields["project"] = project
+        if (cpu := _optional_int(cpu_cores)) is not None:
+            fields["cpu_cores"] = cpu
+        if (memory := _optional_float(memory_gb)) is not None:
+            fields["memory_gb"] = memory
+        if (gpu_n := _optional_int(gpu_count)) is not None:
+            fields["gpu_count"] = gpu_n
+        if (gpu_list := _optional_gpu_ids(gpu_ids)) is not None:
+            fields["gpu_ids"] = gpu_list
+        if note:
+            fields["note"] = note
+        data = PlanUpdate(**fields)
+    except (ValueError, ValidationError):
+        values["form_error"] = "Invalid planned use values."
+        return _render_edit_error(request, core, plan, values, 422)
+    try:
+        core.update_plan(plan.id, data)
+    except CoreClientError as error:
+        values["form_error"] = error.message
+        return _render_edit_error(request, core, plan, values, _core_error_status(error))
     return RedirectResponse(url="/schedule", status_code=303)
+
+
+def _render_edit_error(
+    request: Request,
+    core: CoreClient,
+    plan: PlanRead,
+    values: dict[str, Any],
+    status_code: int,
+) -> Any:
+    zone: ZoneInfo = request.app.state.settings.timezone
+    context = {
+        "request": request,
+        "plan": plan,
+        "timezone_name": zone.key,
+    }
+    context.update(values)
+    return TEMPLATES.TemplateResponse(
+        request, "schedule/edit.html", context, status_code=status_code
+    )
 
 
 @router.post("/schedule")
@@ -309,7 +391,42 @@ def create_planned_use(
     note: Annotated[str, Form()] = "",
 ) -> Any:
     zone: ZoneInfo = request.app.state.settings.timezone
-    servers = {item.key: item for item in core.list_servers()}
+    form_values: dict[str, str] = {
+        "title": title,
+        "server_key": server_key,
+        "date": date,
+        "start_at": start_at,
+        "end_at": end_at,
+        "project": project,
+        "cpu_cores": cpu_cores,
+        "memory_gb": memory_gb,
+        "gpu_count": gpu_count,
+        "gpu_ids": gpu_ids,
+        "note": note,
+    }
+
+    def _form_error(message: str, status_code: int) -> Any:
+        try:
+            context = _schedule_context(
+                request,
+                core,
+                viewer,
+                server_key=server_key,
+                owner_id=None,
+                day=_parse_date(date or None),
+            )
+        except CoreClientError as render_error:
+            return _core_error_page(request, render_error)
+        context["form_error"] = message
+        context["form"] = form_values
+        return TEMPLATES.TemplateResponse(
+            request, "schedule/index.html", context, status_code=status_code
+        )
+
+    try:
+        servers = {item.key: item for item in core.list_servers()}
+    except CoreClientError as error:
+        return _core_error_page(request, error)
     server = servers.get(server_key)
     if server is None:
         raise HTTPException(status_code=422, detail=f"Unknown server key: {server_key}")
@@ -327,20 +444,12 @@ def create_planned_use(
             gpu_ids=gpu_ids,
             note=note,
         )
+    except (ValueError, ValidationError):
+        return _form_error("Invalid planned use values.", 422)
+    try:
         core.create_plan(data)
     except CoreClientError as error:
-        context = _schedule_context(
-            request,
-            core,
-            viewer,
-            server_key=server_key,
-            owner_id=None,
-            day=_parse_date(date or None),
-        )
-        context["form_error"] = error.message
-        return TEMPLATES.TemplateResponse(
-            request, "schedule/index.html", context, status_code=200
-        )
+        return _form_error(error.message, _core_error_status(error))
     return RedirectResponse(url="/schedule", status_code=303)
 
 
@@ -348,5 +457,8 @@ def create_planned_use(
 def cancel_planned_use(
     plan_id: UUID, request: Request, core: CoreClientDep, viewer: ViewerDep
 ) -> Any:
-    core.cancel_plan(plan_id)
+    try:
+        core.cancel_plan(plan_id)
+    except CoreClientError as error:
+        return _core_error_page(request, error)
     return RedirectResponse(url="/schedule", status_code=303)

@@ -82,12 +82,22 @@ class FakeCoreClient(CoreClient):
         self.users = list(users or [])
         self._conflicts = conflicts or {}
         self.calls: list[tuple[str, Any]] = []
+        self.error: Exception | None = None
+        self.fail_at = 0
+        self._call_number = -1
+
+    def _maybe_fail(self) -> None:
+        self._call_number += 1
+        if self.error is not None and self._call_number == self.fail_at:
+            raise self.error
 
     def list_servers(self) -> list[ServerRead]:
+        self._maybe_fail()
         self.calls.append(("list_servers", None))
         return list(self.servers)
 
     def list_users(self) -> list[UserRead]:
+        self._maybe_fail()
         self.calls.append(("list_users", None))
         return list(self.users)
 
@@ -100,6 +110,7 @@ class FakeCoreClient(CoreClient):
         end: datetime | None = None,
         include_cancelled: bool = False,
     ) -> list[PlanRead]:
+        self._maybe_fail()
         self.calls.append(
             (
                 "list_plans",
@@ -115,6 +126,7 @@ class FakeCoreClient(CoreClient):
         return list(self.plans)
 
     def get_plan(self, plan_id: UUID) -> PlanRead:
+        self._maybe_fail()
         self.calls.append(("get_plan", plan_id))
         for plan in self.plans:
             if plan.id == str(plan_id):
@@ -122,14 +134,17 @@ class FakeCoreClient(CoreClient):
         return plan_read(id=str(plan_id))
 
     def list_conflicts(self, plan_id: UUID) -> list[PlanConflictRead]:
+        self._maybe_fail()
         self.calls.append(("list_conflicts", plan_id))
         return list(self._conflicts.get(plan_id, []))
 
     def update_plan(self, plan_id: UUID, data: PlanUpdate) -> PlanRead:
+        self._maybe_fail()
         self.calls.append(("update_plan", {"plan_id": plan_id, "data": data}))
         return plan_read(id=str(plan_id))
 
     def create_plan(self, data: PlanCreate) -> PlanRead:
+        self._maybe_fail()
         self.calls.append(("create_plan", data))
         created = plan_read(
             id=str(uuid4()),
@@ -148,6 +163,7 @@ class FakeCoreClient(CoreClient):
         return created
 
     def cancel_plan(self, plan_id: UUID) -> PlanRead:
+        self._maybe_fail()
         self.calls.append(("cancel_plan", plan_id))
         return plan_read(
             id=str(plan_id),
