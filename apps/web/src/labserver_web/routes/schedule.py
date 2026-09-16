@@ -2,7 +2,7 @@
 
 import builtins
 import pathlib
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from datetime import date as date_type
 from typing import Annotated, Any
 from uuid import UUID
@@ -14,6 +14,11 @@ from labserver_contracts.plans import PlanCreate, PlanRead
 
 from labserver_web.clients.core import CoreClient, CoreClientError
 from labserver_web.dependencies import CoreClientDep
+from labserver_web.time import (
+    format_local_window,
+    local_day_bounds,
+    today_in_zone,
+)
 
 router = APIRouter(tags=["schedule"])
 
@@ -22,8 +27,9 @@ TEMPLATES = Jinja2Templates(
 )
 
 
-def _time(value: datetime) -> str:
-    return value.astimezone(UTC).strftime("%H:%M")
+def _now_utc() -> datetime:
+    """The "now" used to resolve an omitted date filter (patched in tests)."""
+    return datetime.now(tz=UTC)
 
 
 def _resource_text(plan: PlanRead) -> str:
@@ -44,22 +50,29 @@ def _schedule_context(
     core: CoreClient,
     *,
     server_key: str | None,
+    owner_id: UUID | None,
     day: date_type | None,
 ) -> dict[str, Any]:
-    servers = {item.key: item for item in core.list_servers()}
-    chosen = servers.get(server_key) if server_key else None
+    zone = request.app.state.settings.timezone
 
-    start = end = None
-    if day is not None:
-        start = datetime(day.year, day.month, day.day, tzinfo=UTC)
-        end = start + timedelta(days=1)
+    servers = {item.key: item for item in core.list_servers()}
+    users = {user.id: user for user in core.list_users()}
+
+    if server_key is not None and server_key not in servers:
+        raise HTTPException(status_code=422, detail=f"Unknown server key: {server_key}")
+    if owner_id is not None and owner_id not in users:
+        raise HTTPException(status_code=422, detail=f"Unknown owner: {owner_id}")
+
+    if day is None:
+        day = today_in_zone(_now_utc(), zone)
+    start, end = local_day_bounds(day, zone)
 
     plans = core.list_plans(
-        server_id=chosen.id if chosen else None,
+        server_id=servers[server_key].id if server_key is not None else None,
+        owner_id=owner_id,
         start=start,
         end=end,
     )
-    users = {user.id: user for user in core.list_users()}
 
     rows: list[dict[str, Any]] = []
     for plan in plans:
@@ -69,24 +82,39 @@ def _schedule_context(
             {
                 "plan": plan,
                 "owner": owner.display_name if owner else str(plan.owner_id),
-                "window": f"{_time(plan.start_at)}–{_time(plan.end_at)}",
+                "window": format_local_window(plan.start_at, plan.end_at, zone, day),
                 "resources": _resource_text(plan),
                 "overlap": bool(warnings),
             }
         )
     rows.sort(key=lambda row: (row["plan"].server_id, row["plan"].start_at, row["plan"].id))
 
-    groups: builtins.list[dict[str, Any]] = []
-    for server_item in servers.values():
-        server_rows = [row for row in rows if row["plan"].server_id == server_item.id]
-        groups.append({"server": server_item, "rows": server_rows})
+    if server_key is not None:
+        selected = servers[server_key]
+        groups: builtins.list[dict[str, Any]] = [
+            {
+                "server": selected,
+                "rows": [row for row in rows if row["plan"].server_id == selected.id],
+            }
+        ]
+    else:
+        groups = [
+            {
+                "server": server_item,
+                "rows": [row for row in rows if row["plan"].server_id == server_item.id],
+            }
+            for server_item in servers.values()
+        ]
 
     return {
         "request": request,
         "groups": groups,
         "server_key": server_key or "",
-        "date": day.isoformat() if day else "",
-        "servers": list(servers.values()),
+        "owner_id": str(owner_id) if owner_id else "",
+        "date": day.isoformat(),
+        "timezone_name": zone.key,
+        "servers": [selected] if server_key is not None else list(servers.values()),
+        "users": list(users.values()),
     }
 
 
@@ -104,9 +132,12 @@ def view_schedule(
     request: Request,
     core: CoreClientDep,
     server: Annotated[str | None, Query()] = None,
+    owner: Annotated[UUID | None, Query()] = None,
     date: Annotated[str | None, Query()] = None,
 ) -> Any:
-    context = _schedule_context(request, core, server_key=server, day=_parse_date(date))
+    context = _schedule_context(
+        request, core, server_key=server, owner_id=owner, day=_parse_date(date)
+    )
     return TEMPLATES.TemplateResponse(request, "schedule/index.html", context)
 
 
@@ -189,7 +220,11 @@ def create_planned_use(
         core.create_plan(data)
     except CoreClientError as error:
         context = _schedule_context(
-            request, core, server_key=server_key, day=_parse_date(date or None)
+            request,
+            core,
+            server_key=server_key,
+            owner_id=None,
+            day=_parse_date(date or None),
         )
         context["form_error"] = error.message
         return TEMPLATES.TemplateResponse(
