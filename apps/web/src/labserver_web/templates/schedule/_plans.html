@@ -19,7 +19,8 @@
         <td class="resources">{{ row.resources or "not declared" }}</td>
         <td><span class="display-state state-{{ row.plan.display_state.value }}">{{ row.plan.display_state.value }}</span></td>
         <td>
-          {% if row.plan.cancelled_at is none %}
+          {% if row.can_change and row.plan.cancelled_at is none %}
+          <a class="edit" href="/schedule/{{ row.plan.id }}/edit">Edit</a>
           <form method="post" action="/schedule/{{ row.plan.id }}/cancel">
             <button type="submit" class="cancel">Cancel</button>
           </form>
