@@ -277,3 +277,17 @@ def test_duplicate_username_is_rejected() -> None:
             CurrentActor(ADMIN_ID, UserRole.ADMIN),
             UserCreate(username="member", display_name="Duplicate"),
         )
+
+
+def test_active_member_can_list_users() -> None:
+    uow = make_uow()
+    service = UserService(
+        factory_for(uow),
+        clock=fixed_clock,
+        id_factory=fixed_user_id_factory,
+    )
+    member = CurrentActor(MEMBER_ID, UserRole.MEMBER)
+
+    users = service.list_users(member)
+
+    assert {user.username for user in users} == {"admin", "member"}

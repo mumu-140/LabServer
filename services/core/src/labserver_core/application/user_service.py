@@ -28,9 +28,10 @@ class UserService:
         self._id_factory = id_factory
 
     def list_users(self, actor: CurrentActor) -> list[User]:
+        # The planning user directory is member-readable: the shared schedule
+        # needs owner display names and owner filters. Mutation stays admin-only.
         with self._uow_factory() as uow:
             require_active_actor(actor, uow.users.get(actor.user_id))
-            require_admin(actor)
             return uow.users.list_all()
 
     def create_user(self, actor: CurrentActor, data: UserCreate) -> User:
