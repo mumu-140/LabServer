@@ -9,6 +9,7 @@ dependencies = [
   "labserver-contracts",
   "pydantic==2.13.5",
   "python-multipart==0.0.22",
+  "tzdata==2025.2",
   "uvicorn==0.52.4",
 ]
 

@@ -189,7 +189,7 @@ def fake_core() -> FakeCoreClient:
 
 @pytest.fixture
 def client(fake_core: FakeCoreClient) -> TestClient:
-    app = create_app(WebSettings(core_base_url="http://core.test"))
+    app = create_app(WebSettings(core_base_url="http://core.test", timezone_name="Asia/Shanghai"))
     app.dependency_overrides[get_core_client] = lambda: fake_core
     with TestClient(app) as test_client:
         yield test_client
