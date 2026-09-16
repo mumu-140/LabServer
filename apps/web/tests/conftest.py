@@ -5,10 +5,16 @@ from uuid import UUID, uuid4
 import pytest
 from fastapi.testclient import TestClient
 from labserver_contracts.common import UserRole
-from labserver_contracts.plans import PlanConflictRead, PlanCreate, PlanRead
+from labserver_contracts.plans import (
+    PlanConflictRead,
+    PlanCreate,
+    PlanRead,
+    PlanUpdate,
+)
 from labserver_contracts.servers import ServerRead
 from labserver_contracts.users import UserRead
 from labserver_web.app import create_app
+from labserver_web.auth import ViewerContext, get_current_viewer
 from labserver_web.clients.core import CoreClient
 from labserver_web.config import WebSettings
 from labserver_web.dependencies import get_core_client
@@ -76,12 +82,22 @@ class FakeCoreClient(CoreClient):
         self.users = list(users or [])
         self._conflicts = conflicts or {}
         self.calls: list[tuple[str, Any]] = []
+        self.error: Exception | None = None
+        self.fail_at = 0
+        self._call_number = -1
+
+    def _maybe_fail(self) -> None:
+        self._call_number += 1
+        if self.error is not None and self._call_number == self.fail_at:
+            raise self.error
 
     def list_servers(self) -> list[ServerRead]:
+        self._maybe_fail()
         self.calls.append(("list_servers", None))
         return list(self.servers)
 
     def list_users(self) -> list[UserRead]:
+        self._maybe_fail()
         self.calls.append(("list_users", None))
         return list(self.users)
 
@@ -94,6 +110,7 @@ class FakeCoreClient(CoreClient):
         end: datetime | None = None,
         include_cancelled: bool = False,
     ) -> list[PlanRead]:
+        self._maybe_fail()
         self.calls.append(
             (
                 "list_plans",
@@ -106,18 +123,28 @@ class FakeCoreClient(CoreClient):
                 },
             )
         )
-        selected = [
-            plan
-            for plan in self.plans
-            if (include_cancelled or plan.cancelled_at is None)
-            and (server_id is None or plan.server_id == server_id)
-        ]
-        return selected
+        return list(self.plans)
+
+    def get_plan(self, plan_id: UUID) -> PlanRead:
+        self._maybe_fail()
+        self.calls.append(("get_plan", plan_id))
+        for plan in self.plans:
+            if plan.id == str(plan_id):
+                return plan
+        return plan_read(id=str(plan_id))
 
     def list_conflicts(self, plan_id: UUID) -> list[PlanConflictRead]:
+        self._maybe_fail()
+        self.calls.append(("list_conflicts", plan_id))
         return list(self._conflicts.get(plan_id, []))
 
+    def update_plan(self, plan_id: UUID, data: PlanUpdate) -> PlanRead:
+        self._maybe_fail()
+        self.calls.append(("update_plan", {"plan_id": plan_id, "data": data}))
+        return plan_read(id=str(plan_id))
+
     def create_plan(self, data: PlanCreate) -> PlanRead:
+        self._maybe_fail()
         self.calls.append(("create_plan", data))
         created = plan_read(
             id=str(uuid4()),
@@ -136,6 +163,7 @@ class FakeCoreClient(CoreClient):
         return created
 
     def cancel_plan(self, plan_id: UUID) -> PlanRead:
+        self._maybe_fail()
         self.calls.append(("cancel_plan", plan_id))
         return plan_read(
             id=str(plan_id),
@@ -176,6 +204,60 @@ def user_read(user_id: UUID = ALICE_ID, username: str = "alice") -> UserRead:
     )
 
 
+def _make_app(fake_core: FakeCoreClient) -> Any:
+    app = create_app(
+        WebSettings(core_base_url="http://core.test", timezone_name="Asia/Shanghai")
+    )
+    app.dependency_overrides[get_core_client] = lambda: fake_core
+    return app
+
+
+def _client_for(
+    app: Any, viewer: ViewerContext | None = None
+) -> TestClient:  # pragma: no cover - fixture helper
+    if viewer is not None:
+        app.dependency_overrides[get_current_viewer] = lambda: viewer
+    return TestClient(app)
+
+
+@pytest.fixture
+def app(fake_core: FakeCoreClient) -> Any:
+    return _make_app(fake_core)
+
+
+@pytest.fixture
+def client(app: Any) -> TestClient:
+    app.dependency_overrides[get_current_viewer] = lambda: ViewerContext(
+        user_id=ALICE_ID, role=UserRole.MEMBER
+    )
+    with _client_for(app) as test_client:
+        yield test_client
+
+
+@pytest.fixture
+def bob_client(app: Any) -> TestClient:
+    app.dependency_overrides[get_current_viewer] = lambda: ViewerContext(
+        user_id=BOB_ID, role=UserRole.MEMBER
+    )
+    with _client_for(app) as test_client:
+        yield test_client
+
+
+@pytest.fixture
+def admin_client(app: Any) -> TestClient:
+    app.dependency_overrides[get_current_viewer] = lambda: ViewerContext(
+        user_id=BOB_ID, role=UserRole.ADMIN
+    )
+    with _client_for(app) as test_client:
+        yield test_client
+
+
+@pytest.fixture
+def anonymous_client(fake_core: FakeCoreClient) -> TestClient:
+    with _client_for(_make_app(fake_core)) as test_client:
+        yield test_client
+
+
 @pytest.fixture
 def fake_core() -> FakeCoreClient:
     return FakeCoreClient(
@@ -185,11 +267,3 @@ def fake_core() -> FakeCoreClient:
         ],
         users=[user_read(ALICE_ID, "alice"), user_read(BOB_ID, "bob")],
     )
-
-
-@pytest.fixture
-def client(fake_core: FakeCoreClient) -> TestClient:
-    app = create_app(WebSettings(core_base_url="http://core.test"))
-    app.dependency_overrides[get_core_client] = lambda: fake_core
-    with TestClient(app) as test_client:
-        yield test_client

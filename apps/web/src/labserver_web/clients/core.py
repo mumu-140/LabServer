@@ -21,6 +21,13 @@ class CoreClientError(Exception):
         self.message = message
 
 
+class CoreUnavailableError(CoreClientError):
+    """Core could not be reached (transport failure); safe to show users."""
+
+    def __init__(self, message: str = "Core service is unavailable") -> None:
+        super().__init__(503, "service_unavailable", message)
+
+
 class CoreClient:
     def __init__(
         self,
@@ -32,7 +39,10 @@ class CoreClient:
         self._client = factory(base_url)
 
     def _request(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
-        response = self._client.request(method, path, **kwargs)
+        try:
+            response = self._client.request(method, path, **kwargs)
+        except httpx.RequestError as error:
+            raise CoreUnavailableError() from error
         if response.status_code >= 400:
             try:
                 detail = response.json()["error"]

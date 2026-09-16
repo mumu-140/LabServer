@@ -92,6 +92,6 @@ Explicit GPU IDs compare against identical devices; count-only GPU intent checks
 
 ## Servers and users
 
-`GET /api/v1/servers`, `POST /api/v1/servers`, `PATCH /api/v1/servers/{server_id}`: admin-managed logical server registry with optional capacity declarations (`cpu_cores`, `memory_gb`, `gpu_count`). Real hosts and IPs are never part of the API surface.
+`GET /api/v1/servers`, `POST /api/v1/servers`: admin-managed logical server registry with optional capacity declarations (`cpu_cores`, `memory_gb`, `gpu_count`). Real hosts and IPs are never part of the API surface.
 
-`GET /api/v1/users`, `POST /api/v1/users`: admin-managed user registry (`admin`/`member`), used for ownership and display names.
+`GET /api/v1/users` is readable by any authenticated actor (member or admin): the planning user directory powers schedule owner filters and display names. `POST /api/v1/users` stays admin-only. The registry stores logical users (`admin`/`member`), used for ownership and display names.

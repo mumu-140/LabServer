@@ -213,3 +213,19 @@ def test_plan_list_rejects_naive_datetime_filters(api_context: ApiContext) -> No
     )
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "validation_error"
+
+
+def test_standalone_overcommit_is_advisory_warning(api_context: ApiContext) -> None:
+    client = as_member(api_context)
+    response = client.post("/api/v1/plans", json=payload(gpu_count=5))
+    assert response.status_code == 201, response.text
+
+    conflicts = client.get(f"/api/v1/plans/{response.json()['id']}/conflicts")
+    assert conflicts.status_code == 200
+    gpu = next(
+        item for item in conflicts.json() if item["resource"] == "gpu"
+    )
+    assert gpu["certainty"] == "confirmed"
+    assert gpu["requested"] == 5.0
+    assert gpu["available"] == 4.0
+    assert gpu["conflicting_plan_ids"] == []

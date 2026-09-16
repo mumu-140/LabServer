@@ -12,8 +12,18 @@
       <option value="{{ item.key }}" {% if item.key == server_key %}selected{% endif %}>{{ item.key }}</option>
       {% endfor %}
     </select>
+  <label>Owner
+    <select name="owner">
+      <option value="">All owners</option>
+      {% for user in users %}
+      <option value="{{ user.id }}" {% if user.id|string == owner_id %}selected{% endif %}>{{ user.display_name }}</option>
+      {% endfor %}
+    </select>
   </label>
   <label>Date
+    <input type="date" name="date" value="{{ date }}" />
+  </label>
+  <span class="tz-label">Timezone: {{ timezone_name }}</span>
     <input type="date" name="date" value="{{ date }}" />
   </label>
   <button type="submit">Filter</button>
