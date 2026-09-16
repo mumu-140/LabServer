@@ -5,6 +5,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 ROUTES_DIR = REPO_ROOT / "services/core/src/labserver_core/api/routes"
 CONTRACTS_DIR = REPO_ROOT / "packages/contracts/src/labserver_contracts"
+WEB_SRC_DIR = REPO_ROOT / "apps/web/src"
 
 
 def imported_modules(source: str) -> set[str]:
@@ -93,3 +94,17 @@ def test_active_sources_do_not_use_approval_terminology() -> None:
                 violations.append((relative, match.group(0)))
 
     assert violations == []
+
+
+def test_web_sources_do_not_import_core_or_sqlalchemy() -> None:
+    """Web is an HTTP client of Core: no Core internals, no ORM reach-through."""
+    violations: dict[str, set[str]] = {}
+    for path in sorted(WEB_SRC_DIR.rglob("*.py")):
+        forbidden = forbidden_imports(
+            path.read_text(encoding="utf-8"),
+            ("labserver_core", "sqlalchemy"),
+        )
+        if forbidden:
+            violations[str(path.relative_to(REPO_ROOT))] = forbidden
+
+    assert violations == {}

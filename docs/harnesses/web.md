@@ -41,6 +41,9 @@ Scope: `apps/web/`
 - An unplanned activity is an observation, not automatically a policy violation.
 - Server cards use logical server names; real IPs are not rendered by default.
 - Do not render approval, queue, priority, or allocation vocabulary as product concepts.
+- Every route requires a viewer through the default-deny `ViewerContext` seam (`get_current_viewer`): until a production auth adapter overrides this dependency the Web answers HTTP 401. No header, cookie, or query-parameter inspection happens in Web code, and Core remains authoritative for authorization.
+- Edit and Cancel controls render only for the plan owner or an admin (UX helper `can_change`); Core still enforces ownership.
+- Naive `datetime-local` form input is interpreted in the configured `LABSERVER_TIMEZONE` (IANA name, development default `UTC`); stored windows are UTC and rendered back in the same zone, with the omitted date filter resolving to today in that zone.
 
 ## Testing
 
@@ -51,4 +54,4 @@ Prefer route/view/component tests for all behavior and a small number of browser
 - conflict-warning rendering;
 - running-state freshness/error rendering (future milestone).
 
-Web tests use a fake `CoreClient` (dependency override of `get_core_client`) and never require a running Core service.
+Web tests use a fake `CoreClient` (dependency override of `get_core_client`) and never require a running Core service. Test clients authenticate by overriding `get_current_viewer` with an explicit `ViewerContext` (owner member, other member, admin, or anonymous); the anonymous case proves the default-deny seam stays 401.

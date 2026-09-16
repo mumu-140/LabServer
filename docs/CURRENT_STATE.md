@@ -6,7 +6,7 @@ Last updated: 2026-09-16
 
 M1.1 simple planning is merged and verified on `main`. It has not been deployed.
 
-A post-merge source audit found a narrow set of Web/core correctness gaps. M1.1H is now the required hardening gate before M2 Docker + Beszel work.
+M1.1H web hardening is implemented on branch `fix/m1-1h-web-hardening` and is under review (pull request pending merge). It has not been deployed.
 
 ## Main baseline
 
@@ -31,11 +31,15 @@ M1.1 was squash-merged through PR #4:
 - First minimal Web harness: FastAPI + Jinja2 + vendored HTMX + plain CSS at `/schedule`.
 - Old request/approval/reservation product slice removed from active source/API.
 
-## M1.1H active design work
+## M1.1H implementation state
 
 Branch:
 
-`docs/m1-1h-web-hardening-plan`
+`fix/m1-1h-web-hardening`
+
+Implementation head (recorded immediately before the final M1.1H docs commit):
+
+`21098fd8bb291893ad27443fd07d2d7b7ad0e7a2`
 
 Accepted ADR:
 
@@ -49,9 +53,11 @@ Implementation plan:
 
 `docs/superpowers/plans/2026-09-16-m1-1h-web-hardening.md`
 
-Status: design and implementation plan are written; no M1.1H behavior-fix code has been implemented on this planning branch.
+Status: Tasks 1-7 of the plan are implemented as commits on the branch (member-readable user directory; standalone-capacity warning; explicit `LABSERVER_TIMEZONE` semantics; deterministic schedule filters/dates; default-deny `ViewerContext` with owner/admin edit controls; normalized form/Core/network failures; corrected docs and architecture guards). M1.1H is under review and NOT DEPLOYED. Do not describe M1.1H as merged until `main` actually contains it.
 
-## M1.1H issues to close
+## M1.1H issues (closed by the branch)
+
+The audit items below motivated M1.1H; each is closed on `fix/m1-1h-web-hardening`:
 
 1. `GET /api/v1/users` is still admin-only, but the member-visible Schedule requires the planning user directory for owner names/filtering.
 2. A single `PlanEntry` that by itself exceeds known CPU/RAM/GPU capacity can miss an advisory warning when there are no overlapping plans.

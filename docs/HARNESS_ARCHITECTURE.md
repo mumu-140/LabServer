@@ -55,12 +55,10 @@ Rules:
 ## Harness: web
 
 Owns:
-- Dashboard and server cards.
-- Running-activity views.
-- Request/plan forms.
-- Schedule/calendar views.
-- Statistics presentation.
-- Client-side polling/SSE consumption.
+- Plan forms (publish and edit).
+- Shared `/schedule` view: filtering, grouping, and configured-timezone presentation.
+- Owner/admin edit controls driven by a default-deny `ViewerContext` seam.
+- Dashboard, running-activity, and statistics presentation (future milestones).
 
 Does not own:
 - Conflict rules.
@@ -73,9 +71,8 @@ Does not own:
 Owns:
 - Users and roles.
 - Managed-server registry by logical name + runtime IP mapping reference.
-- Task requests.
-- Reservations/plans.
-- Conflict evaluation.
+- Planning entries (`PlanEntry`): published intent only.
+- Conflict evaluation (advisory, never blocking).
 - Observed runtime activities.
 - Plan-vs-actual reconciliation.
 - Usage aggregation.
