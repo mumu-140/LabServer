@@ -5,6 +5,14 @@ from .common import (
     ErrorResponse,
     UserRole,
 )
+from .monitoring import (
+    DashboardRead,
+    FreshnessStatus,
+    GpuMetricsRead,
+    HostMetricsRead,
+    HostStatus,
+    ServerDashboardCard,
+)
 from .plans import (
     PlanConflictRead,
     PlanCreate,
@@ -18,7 +26,12 @@ from .users import UserCreate, UserPasswordSet, UserRead
 __all__ = [
     "ConflictCertainty",
     "ConflictResource",
+    "DashboardRead",
     "ErrorResponse",
+    "FreshnessStatus",
+    "GpuMetricsRead",
+    "HostMetricsRead",
+    "HostStatus",
     "LoginRequest",
     "PlanConflictRead",
     "PlanCreate",
@@ -26,11 +39,13 @@ __all__ = [
     "PlanRead",
     "PlanUpdate",
     "ServerCreate",
+    "ServerDashboardCard",
     "ServerRead",
     "ServerUpdate",
+    "SessionRead",
     "UserCreate",
     "UserPasswordSet",
     "UserRead",
-    "SessionRead",
     "UserRole",
 ]
+

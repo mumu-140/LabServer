@@ -9,8 +9,25 @@
   </head>
   <body>
     <header class="site-header">
-      <a class="brand" href="/schedule">LabServer</a>
+      <div class="header-inner">
+        <div class="brand-nav">
+          <a class="brand" href="/">LabServer</a>
+          <nav class="main-nav">
+            <a class="nav-link {% if active_tab == 'dashboard' %}active{% endif %}" href="/">Dashboard</a>
+            <a class="nav-link {% if active_tab == 'schedule' %}active{% endif %}" href="/schedule">Schedule</a>
+          </nav>
+        </div>
+        {% if viewer %}
+        <div class="user-nav">
+          <span class="role-tag">{{ viewer.role.value }}</span>
+          <form action="/logout" method="post" class="logout-form">
+            <button type="submit" class="logout-btn">Log out</button>
+          </form>
+        </div>
+        {% endif %}
+      </div>
     </header>
+
     <main class="page">
       {% block content %}{% endblock %}
     </main>
