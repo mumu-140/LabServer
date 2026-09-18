@@ -13,8 +13,8 @@ from labserver_core.application.server_service import ServerService
 from labserver_core.application.user_service import UserService
 
 
-
 def get_uow_factory(request: Request) -> UnitOfWorkFactory:
+
     factory: Callable[[], UnitOfWork] = request.app.state.uow_factory
     return factory
 
