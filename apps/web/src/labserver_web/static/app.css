@@ -1722,6 +1722,236 @@ td.when {
   }
 }
 
+/* User Management Views */
+.alert-success {
+  background: rgba(0, 255, 157, 0.12);
+  color: #a7f3d0;
+  border: 1px solid rgba(0, 255, 157, 0.45);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  font-size: 13.5px;
+  font-weight: 550;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0;
+  box-shadow: 0 0 16px rgba(0, 255, 157, 0.22);
+}
+
+.users-layout {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .users-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.user-username-badge {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--primary);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.user-display-name {
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.role-badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.role-badge-admin {
+  background: rgba(188, 19, 254, 0.15);
+  border: 1px solid rgba(188, 19, 254, 0.5);
+  color: #e9d5ff;
+  box-shadow: 0 0 8px rgba(188, 19, 254, 0.25);
+}
+
+.role-badge-member {
+  background: rgba(0, 240, 255, 0.1);
+  border: 1px solid rgba(0, 240, 255, 0.35);
+  color: var(--primary);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.status-badge-active {
+  background: rgba(0, 255, 157, 0.1);
+  border: 1px solid rgba(0, 255, 157, 0.4);
+  color: #34d399;
+}
+
+.status-badge-disabled {
+  background: rgba(255, 51, 102, 0.12);
+  border: 1px solid rgba(255, 51, 102, 0.4);
+  color: #f87171;
+}
+
+.user-actions-cluster {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.action-btn-sm {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-secondary);
+}
+
+.btn-toggle-disable {
+  background: rgba(255, 51, 102, 0.08);
+  border-color: rgba(255, 51, 102, 0.3);
+  color: #fda4af;
+}
+
+.btn-toggle-disable:hover {
+  background: rgba(255, 51, 102, 0.2);
+  border-color: var(--cyber-rose);
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(255, 51, 102, 0.35);
+}
+
+.btn-toggle-enable {
+  background: rgba(0, 255, 157, 0.08);
+  border-color: rgba(0, 255, 157, 0.3);
+  color: #6ee7b7;
+}
+
+.btn-toggle-enable:hover {
+  background: rgba(0, 255, 157, 0.2);
+  border-color: #00ff9d;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(0, 255, 157, 0.35);
+}
+
+.btn-reset-toggle {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--line);
+  color: var(--ink-secondary);
+  list-style: none;
+  display: inline-block;
+}
+
+.btn-reset-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.btn-reset-toggle:hover {
+  background: var(--primary-subtle);
+  border-color: var(--primary-border);
+  color: var(--primary);
+}
+
+.reset-details {
+  position: relative;
+  display: inline-block;
+}
+
+.reset-inline-form {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 50;
+  display: flex;
+  gap: 6px;
+  background: var(--bg-surface);
+  border: 1px solid var(--line-cyber-bright);
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.8), 0 0 15px var(--glow-subtle);
+  min-width: 250px;
+}
+
+.reset-input {
+  font-size: 12px;
+  padding: 5px 8px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: #ffffff;
+  flex: 1;
+}
+
+.reset-input:focus {
+  border-color: var(--primary);
+  outline: none;
+}
+
+.btn-confirm-reset {
+  background: var(--primary);
+  color: #060912;
+  font-weight: 700;
+  border: none;
+  padding: 5px 10px;
+}
+
+.btn-confirm-reset:hover {
+  background: #ffffff;
+  box-shadow: 0 0 10px var(--glow-color);
+}
+
+.self-tag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-muted);
+  font-style: italic;
+}
+
+.form-help {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-muted);
+  margin-top: 4px;
+}
+
+.provision-submit-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: 750;
+  border-radius: 9px;
+  margin-top: 8px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;

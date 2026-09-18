@@ -10,7 +10,7 @@ from fastapi.templating import Jinja2Templates
 
 from labserver_web.clients.core import CoreClient
 from labserver_web.config import WebSettings, load_settings
-from labserver_web.routes import auth, dashboard, health, running, schedule
+from labserver_web.routes import auth, dashboard, health, running, schedule, users
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
@@ -44,6 +44,7 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
     application.include_router(dashboard.router)
     application.include_router(running.router)
     application.include_router(schedule.router)
+    application.include_router(users.router)
     application.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
     return application
 

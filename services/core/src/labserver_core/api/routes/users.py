@@ -2,7 +2,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
-from labserver_contracts.users import UserCreate, UserPasswordSet, UserRead
+from labserver_contracts.users import UserCreate, UserPasswordSet, UserRead, UserUpdate
 
 from labserver_core.api.dependencies import (
     get_auth_service,
@@ -41,3 +41,14 @@ def set_password(
     auth_service: Annotated[AuthService, Depends(get_auth_service)],
 ) -> None:
     auth_service.set_password(actor, user_id, data.password)
+
+
+@router.patch("/{user_id}", response_model=UserRead)
+def update_user(
+    user_id: UUID,
+    data: UserUpdate,
+    actor: Annotated[CurrentActor, Depends(get_current_actor)],
+    service: Annotated[UserService, Depends(get_user_service)],
+) -> UserRead:
+    return UserRead.model_validate(service.update_user(actor, user_id, data))
+

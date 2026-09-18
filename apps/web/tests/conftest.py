@@ -20,10 +20,10 @@ from labserver_contracts.plans import (
 )
 from labserver_contracts.runtime import RuntimeOverviewRead
 from labserver_contracts.servers import ServerRead
-from labserver_contracts.users import UserRead
+from labserver_contracts.users import UserCreate, UserRead, UserUpdate
 from labserver_web.app import create_app
 from labserver_web.auth import ViewerContext, get_current_viewer
-from labserver_web.clients.core import CoreClient
+from labserver_web.clients.core import CoreClient, CoreClientError
 from labserver_web.config import WebSettings
 from labserver_web.dependencies import get_core_client
 
@@ -109,10 +109,60 @@ class FakeCoreClient(CoreClient):
         self.calls.append(("list_servers", None))
         return list(self.servers)
 
-    def list_users(self) -> list[UserRead]:
+    def list_users(self, *, cookies: dict[str, str] | None = None) -> list[UserRead]:
         self._maybe_fail()
-        self.calls.append(("list_users", None))
+        self.calls.append(("list_users", cookies))
         return list(self.users)
+
+    def create_user(
+        self, data: UserCreate, *, cookies: dict[str, str] | None = None
+    ) -> UserRead:
+        self._maybe_fail()
+        self.calls.append(("create_user", {"data": data, "cookies": cookies}))
+        user = UserRead(
+            id=uuid4(),
+            username=data.username,
+            display_name=data.display_name,
+            role=data.role,
+            enabled=data.enabled,
+            created_at=NOW,
+            updated_at=NOW,
+        )
+        self.users.append(user)
+        return user
+
+    def set_user_password(
+        self, user_id: UUID, password: str, *, cookies: dict[str, str] | None = None
+    ) -> None:
+        self._maybe_fail()
+        self.calls.append(
+            (
+                "set_user_password",
+                {"user_id": user_id, "password": password, "cookies": cookies},
+            )
+        )
+
+    def update_user(
+        self, user_id: UUID, data: UserUpdate, *, cookies: dict[str, str] | None = None
+    ) -> UserRead:
+        self._maybe_fail()
+        self.calls.append(
+            ("update_user", {"user_id": user_id, "data": data, "cookies": cookies})
+        )
+        for i, u in enumerate(self.users):
+            if u.id == user_id:
+                updated = UserRead(
+                    id=u.id,
+                    username=u.username,
+                    display_name=data.display_name if data.display_name is not None else u.display_name,
+                    role=data.role if data.role is not None else u.role,
+                    enabled=data.enabled if data.enabled is not None else u.enabled,
+                    created_at=u.created_at,
+                    updated_at=NOW,
+                )
+                self.users[i] = updated
+                return updated
+        raise CoreClientError(404, "not_found", "User not found")
 
     def list_plans(
         self,

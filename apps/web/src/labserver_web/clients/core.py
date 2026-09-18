@@ -11,7 +11,7 @@ from labserver_contracts.monitoring import DashboardRead, HostMetricsRead
 from labserver_contracts.plans import PlanConflictRead, PlanCreate, PlanRead, PlanUpdate
 from labserver_contracts.runtime import RuntimeOverviewRead
 from labserver_contracts.servers import ServerRead
-from labserver_contracts.users import UserRead
+from labserver_contracts.users import UserCreate, UserRead, UserUpdate
 
 
 class CoreClientError(Exception):
@@ -62,9 +62,38 @@ class CoreClient:
         payload = self._request("GET", "/api/v1/servers").json()
         return [ServerRead.model_validate(item) for item in payload]
 
-    def list_users(self) -> list[UserRead]:
-        payload = self._request("GET", "/api/v1/users").json()
+    def list_users(self, *, cookies: dict[str, str] | None = None) -> list[UserRead]:
+        payload = self._request("GET", "/api/v1/users", cookies=cookies).json()
         return [UserRead.model_validate(item) for item in payload]
+
+    def create_user(
+        self, data: UserCreate, *, cookies: dict[str, str] | None = None
+    ) -> UserRead:
+        payload = self._request(
+            "POST", "/api/v1/users", json=data.model_dump(mode="json"), cookies=cookies
+        ).json()
+        return UserRead.model_validate(payload)
+
+    def set_user_password(
+        self, user_id: UUID, password: str, *, cookies: dict[str, str] | None = None
+    ) -> None:
+        self._request(
+            "POST",
+            f"/api/v1/users/{user_id}/password",
+            json={"password": password},
+            cookies=cookies,
+        )
+
+    def update_user(
+        self, user_id: UUID, data: UserUpdate, *, cookies: dict[str, str] | None = None
+    ) -> UserRead:
+        payload = self._request(
+            "PATCH",
+            f"/api/v1/users/{user_id}",
+            json=data.model_dump(mode="json", exclude_unset=True),
+            cookies=cookies,
+        ).json()
+        return UserRead.model_validate(payload)
 
     def list_plans(
         self,

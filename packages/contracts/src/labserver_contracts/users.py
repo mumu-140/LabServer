@@ -19,6 +19,12 @@ class UserPasswordSet(StrictWriteModel):
     password: Annotated[str, StringConstraints(min_length=8)]
 
 
+class UserUpdate(StrictWriteModel):
+    display_name: TrimmedText | None = None
+    role: UserRole | None = None
+    enabled: bool | None = None
+
+
 class UserRead(ReadModel):
     id: UUID
     username: str

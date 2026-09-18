@@ -1,11 +1,12 @@
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from labserver_contracts.users import UserCreate
+from labserver_contracts.users import UserCreate, UserUpdate
 
 from labserver_core.domain.entities import User
-from labserver_core.domain.errors import DomainValidationError
+from labserver_core.domain.errors import DomainValidationError, NotFound
 
 from .actors import CurrentActor, require_active_actor, require_admin
 from .ports import UnitOfWorkFactory
@@ -54,3 +55,25 @@ class UserService:
             uow.users.add(user)
             uow.commit()
             return user
+
+    def update_user(self, actor: CurrentActor, user_id: UUID, data: UserUpdate) -> User:
+        with self._uow_factory() as uow:
+            require_active_actor(actor, uow.users.get(actor.user_id))
+            require_admin(actor)
+            user = uow.users.get(user_id)
+            if user is None:
+                raise NotFound("User not found")
+            if data.enabled is False and user.id == actor.user_id:
+                raise DomainValidationError("Cannot disable your own account")
+
+            now = self._clock()
+            updated = replace(
+                user,
+                display_name=data.display_name if data.display_name is not None else user.display_name,
+                role=data.role if data.role is not None else user.role,
+                enabled=data.enabled if data.enabled is not None else user.enabled,
+                updated_at=now,
+            )
+            uow.users.save(updated)
+            uow.commit()
+            return updated
