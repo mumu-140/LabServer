@@ -15,7 +15,7 @@ echo " Starting LabServer Loopback Smoke Verification   "
 echo "=================================================="
 
 # 1. Healthz checks
-echo -n "[1/11] Testing Core /healthz... "
+echo -n "[1/14] Testing Core /healthz... "
 CORE_HEALTH="$(curl -s -f --noproxy "*" "${CORE_URL}/healthz")"
 if [[ "${CORE_HEALTH}" != *'"status":"ok"'* ]] && [[ "${CORE_HEALTH}" != *'"status": "ok"'* ]]; then
     echo "FAILED: unexpected response: ${CORE_HEALTH}"
@@ -23,7 +23,7 @@ if [[ "${CORE_HEALTH}" != *'"status":"ok"'* ]] && [[ "${CORE_HEALTH}" != *'"stat
 fi
 echo "OK"
 
-echo -n "[2/11] Testing Web /healthz... "
+echo -n "[2/14] Testing Web /healthz... "
 WEB_HEALTH="$(curl -s -f --noproxy "*" "${WEB_URL}/healthz")"
 if [[ "${WEB_HEALTH}" != *'"status":"ok"'* ]] && [[ "${WEB_HEALTH}" != *'"status": "ok"'* ]]; then
     echo "FAILED: unexpected response: ${WEB_HEALTH}"
@@ -31,8 +31,8 @@ if [[ "${WEB_HEALTH}" != *'"status":"ok"'* ]] && [[ "${WEB_HEALTH}" != *'"status
 fi
 echo "OK"
 
-# 2. Public Login page and Unauthenticated Default-Deny on /schedule and /dashboard
-echo -n "[3/11] Testing Web GET /login (200) and unauthenticated /schedule & /dashboard (401)... "
+# 2. Public Login page and Unauthenticated Default-Deny on /schedule, /dashboard, /running
+echo -n "[3/14] Testing Web GET /login (200) and unauthenticated /schedule, /dashboard, /running (401)... "
 LOGIN_HTML="$(curl -s -f --noproxy "*" "${WEB_URL}/login")"
 if [[ "${LOGIN_HTML}" != *"<form"* ]] || [[ "${LOGIN_HTML}" != *"password"* ]]; then
     echo "FAILED: /login missing form elements"
@@ -50,11 +50,17 @@ if [ "${UNAUTH_DASHBOARD}" -ne 401 ]; then
     echo "FAILED: Expected HTTP 401 on unauthenticated /dashboard, got ${UNAUTH_DASHBOARD}"
     exit 1
 fi
+
+UNAUTH_RUNNING="$(curl -s -o /dev/null -w "%{http_code}" --noproxy "*" "${WEB_URL}/running")"
+if [ "${UNAUTH_RUNNING}" -ne 401 ]; then
+    echo "FAILED: Expected HTTP 401 on unauthenticated /running, got ${UNAUTH_RUNNING}"
+    exit 1
+fi
 echo "OK"
 
 # 3. Bootstrap Admin
 SMOKE_ADMIN="smoke_admin_$$"
-echo -n "[4/11] Testing Admin Bootstrap for user '${SMOKE_ADMIN}'... "
+echo -n "[4/14] Testing Admin Bootstrap for user '${SMOKE_ADMIN}'... "
 BOOTSTRAP_OUT="$("${SCRIPT_DIR}/bootstrap-admin.sh" "${SMOKE_ADMIN}" 2>&1 || true)"
 ADMIN_PASSWORD=""
 
@@ -71,7 +77,7 @@ else
 fi
 
 # 4. Seed Fleet Servers
-echo -n "[5/11] Testing Fleet Server Seeding... "
+echo -n "[5/14] Testing Fleet Server Seeding... "
 SEED_OUT="$("${SCRIPT_DIR}/seed-servers.sh" 2>&1 || true)"
 if echo "${SEED_OUT}" | grep -q "Successfully seeded"; then
     echo "OK (fleet servers seeded)"
@@ -83,7 +89,7 @@ fi
 
 # 5. Web Login Flow (if password available)
 if [ -n "${ADMIN_PASSWORD}" ]; then
-    echo -n "[6/11] Testing Web POST /login with admin credentials... "
+    echo -n "[6/14] Testing Web POST /login with admin credentials... "
     HTTP_CODE="$(curl -s -o /dev/null -w "%{http_code}" --noproxy "*" \
         -c "${COOKIE_JAR}" \
         -X POST "${WEB_URL}/login" \
@@ -101,7 +107,7 @@ if [ -n "${ADMIN_PASSWORD}" ]; then
     echo "OK (received labserver_session cookie)"
 
     # 6. Authenticated Web /schedule
-    echo -n "[7/11] Testing Authenticated Web GET /schedule using session cookie... "
+    echo -n "[7/14] Testing Authenticated Web GET /schedule using session cookie... "
     AUTH_SCHEDULE="$(curl -s -f --noproxy "*" -b "${COOKIE_JAR}" "${WEB_URL}/schedule")"
     if [[ "${AUTH_SCHEDULE}" != *"Schedule"* ]] && [[ "${AUTH_SCHEDULE}" != *"schedule"* ]]; then
         echo "FAILED: /schedule missing expected markup for authenticated viewer"
@@ -110,7 +116,7 @@ if [ -n "${ADMIN_PASSWORD}" ]; then
     echo "OK (schedule rendered for authenticated admin)"
 
     # 7. Authenticated Web /dashboard
-    echo -n "[8/11] Testing Authenticated Web GET /dashboard using session cookie... "
+    echo -n "[8/14] Testing Authenticated Web GET /dashboard using session cookie... "
     AUTH_DASHBOARD="$(curl -s -f --noproxy "*" -b "${COOKIE_JAR}" "${WEB_URL}/dashboard")"
     if [[ "${AUTH_DASHBOARD}" != *"card-fwq10"* ]] && [[ "${AUTH_DASHBOARD}" != *"fwq10"* ]]; then
         echo "FAILED: /dashboard missing server cards markup"
@@ -118,8 +124,17 @@ if [ -n "${ADMIN_PASSWORD}" ]; then
     fi
     echo "OK (dashboard rendered server cards)"
 
-    # 8. Authenticated Core /api/v1/auth/me
-    echo -n "[9/11] Testing Core GET /api/v1/auth/me using session cookie... "
+    # 8. Authenticated Web /running
+    echo -n "[9/14] Testing Authenticated Web GET /running using session cookie... "
+    AUTH_RUNNING="$(curl -s -f --noproxy "*" -b "${COOKIE_JAR}" "${WEB_URL}/running")"
+    if [[ "${AUTH_RUNNING}" != *"Running Compute"* ]]; then
+        echo "FAILED: /running missing Running Compute markup"
+        exit 1
+    fi
+    echo "OK (running compute view rendered)"
+
+    # 9. Authenticated Core /api/v1/auth/me
+    echo -n "[10/14] Testing Core GET /api/v1/auth/me using session cookie... "
     ME_JSON="$(curl -s -f --noproxy "*" \
         -b "${COOKIE_JAR}" \
         -H "Accept: application/json" \
@@ -131,8 +146,8 @@ if [ -n "${ADMIN_PASSWORD}" ]; then
     fi
     echo "OK (authenticated as admin)"
 
-    # 9. Authenticated Core /api/v1/monitoring/dashboard
-    echo -n "[10/11] Testing Core GET /api/v1/monitoring/dashboard using session cookie... "
+    # 10. Authenticated Core /api/v1/monitoring/dashboard
+    echo -n "[11/14] Testing Core GET /api/v1/monitoring/dashboard using session cookie... "
     MON_JSON="$(curl -s -f --noproxy "*" \
         -b "${COOKIE_JAR}" \
         -H "Accept: application/json" \
@@ -144,8 +159,41 @@ if [ -n "${ADMIN_PASSWORD}" ]; then
     fi
     echo "OK (monitoring dashboard API returned server cards)"
 
-    # 10. Web Logout
-    echo -n "[11/11] Testing Web POST /logout... "
+    # 11. Collector POST /api/v1/runtime/report and Web /running reflection
+    echo -n "[12/14] Testing Core POST /api/v1/runtime/report and Web /running live reflection... "
+    REPORT_PAYLOAD='{"server_key":"fwq57","reported_at":"'"$(date -u +'%Y-%m-%dT%H:%M:%SZ')"'","gpus":[{"index":0,"name":"NVIDIA A100-SXM4-40GB","memory_total_mb":40960.0,"memory_used_mb":10240.0,"utilization_gpu_percent":65.0,"temperature_celsius":48,"processes":[{"gpu_id":0,"pid":99999,"process_name":"python train.py","username":"alice","used_memory_mb":8192.0}]}]}'
+    REPORT_RES="$(curl -s -f --noproxy "*" \
+        -X POST "${CORE_URL}/api/v1/runtime/report" \
+        -H "Content-Type: application/json" \
+        -d "${REPORT_PAYLOAD}")"
+
+    if [[ "${REPORT_RES}" != *'"status":"ok"'* ]] && [[ "${REPORT_RES}" != *'"status": "ok"'* ]]; then
+        echo "FAILED: /api/v1/runtime/report returned unexpected response: ${REPORT_RES}"
+        exit 1
+    fi
+
+    RUNNING_HTML="$(curl -s -f --noproxy "*" -b "${COOKIE_JAR}" "${WEB_URL}/running")"
+    if [[ "${RUNNING_HTML}" != *"fwq57"* ]] || [[ "${RUNNING_HTML}" != *"99999"* ]] || [[ "${RUNNING_HTML}" != *"train.py"* ]]; then
+        echo "FAILED: /running missing reported runtime process details"
+        exit 1
+    fi
+    echo "OK (runtime report accepted and reflected in Web /running view)"
+
+    # 12. Authenticated Core /api/v1/runtime/overview
+    echo -n "[13/14] Testing Core GET /api/v1/runtime/overview using session cookie... "
+    RUN_JSON="$(curl -s -f --noproxy "*" \
+        -b "${COOKIE_JAR}" \
+        -H "Accept: application/json" \
+        "${CORE_URL}/api/v1/runtime/overview")"
+
+    if [[ "${RUN_JSON}" != *'"servers":'* ]] || [[ "${RUN_JSON}" != *'"fwq57"'* ]]; then
+        echo "FAILED: /api/v1/runtime/overview missing servers or fwq57: ${RUN_JSON}"
+        exit 1
+    fi
+    echo "OK (runtime overview API returned server runtime status)"
+
+    # 13. Web Logout
+    echo -n "[14/14] Testing Web POST /logout... "
     LOGOUT_CODE="$(curl -s -o /dev/null -w "%{http_code}" --noproxy "*" \
         -b "${COOKIE_JAR}" \
         -c "${COOKIE_JAR}" \
@@ -167,16 +215,26 @@ if [ -n "${ADMIN_PASSWORD}" ]; then
         echo "FAILED: Expected HTTP 401 on /dashboard after logout, got ${AFTER_LOGOUT_DASHBOARD}"
         exit 1
     fi
-    echo "OK (session invalidated and /schedule & /dashboard return 401)"
+
+    AFTER_LOGOUT_RUNNING="$(curl -s -o /dev/null -w "%{http_code}" --noproxy "*" -b "${COOKIE_JAR}" "${WEB_URL}/running")"
+    if [ "${AFTER_LOGOUT_RUNNING}" -ne 401 ]; then
+        echo "FAILED: Expected HTTP 401 on /running after logout, got ${AFTER_LOGOUT_RUNNING}"
+        exit 1
+    fi
+    echo "OK (session invalidated and /schedule, /dashboard & /running return 401)"
 else
-    echo "[6/11] Skipping login (no password captured for existing admin)"
-    echo "[7/11] Skipping authenticated /schedule"
-    echo "[8/11] Skipping authenticated /dashboard"
-    echo "[9/11] Skipping /auth/me"
-    echo "[10/11] Skipping /api/v1/monitoring/dashboard"
-    echo "[11/11] Skipping logout"
+    echo "[6/14] Skipping login (no password captured for existing admin)"
+    echo "[7/14] Skipping authenticated /schedule"
+    echo "[8/14] Skipping authenticated /dashboard"
+    echo "[9/14] Skipping authenticated /running"
+    echo "[10/14] Skipping /auth/me"
+    echo "[11/14] Skipping /api/v1/monitoring/dashboard"
+    echo "[12/14] Skipping runtime report and reflection"
+    echo "[13/14] Skipping /api/v1/runtime/overview"
+    echo "[14/14] Skipping logout"
 fi
 
 echo "=================================================="
-echo " All 11 Loopback Smoke Checks Passed Successfully! "
+echo " All 14 Loopback Smoke Checks Passed Successfully! "
 echo "=================================================="
+

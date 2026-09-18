@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Running — LabServer{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+  <div>
+    <h1>Running Compute</h1>
+    <p class="lede">Live GPU device utilization and compute processes correlated with published plan intent.</p>
+  </div>
+  <div class="observed-at">
+    Observed: {{ overview.observed_at.strftime('%Y-%m-%d %H:%M:%S UTC') }}
+  </div>
+</div>
+
+{% if not servers %}
+  <div class="empty-state">
+    <p>No managed servers registered or reporting runtime status.</p>
+  </div>
+{% else %}
+  <div class="running-server-list">
+    {% for server in servers %}
+      <div class="card running-server-card" id="server-{{ server.server_key }}">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h2 class="card-title">{{ server.display_name }}</h2>
+            <span class="card-key">{{ server.server_key }}</span>
+          </div>
+          <div class="status-badge-container">
+            {% if server.status.value == "active" %}
+              <span class="badge badge-active">● Active</span>
+            {% elif server.status.value == "idle" %}
+              <span class="badge badge-idle">○ Idle</span>
+            {% elif server.freshness.value == "stale" %}
+              <span class="badge badge-up-stale">▲ Stale</span>
+            {% else %}
+              <span class="badge badge-unreachable">? Unavailable</span>
+            {% endif %}
+
+            {% if server.unplanned_processes_count > 0 %}
+              <span class="badge badge-unplanned">▲ {{ server.unplanned_processes_count }} unplanned</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="runtime-meta">
+            {% if server.reported_at %}
+              <span class="meta-item">Reported: {{ server.reported_at.strftime('%Y-%m-%d %H:%M:%S UTC') }}</span>
+            {% else %}
+              <span class="meta-item empty">No report received</span>
+            {% endif %}
+          </div>
+
+          <!-- GPUs Overview Grid -->
+          {% if server.gpus %}
+            <div class="gpu-grid">
+              {% for gpu in server.gpus %}
+                <div class="gpu-card">
+                  <div class="gpu-header">
+                    <span class="gpu-title">GPU {{ gpu.index }}: {{ gpu.name }}</span>
+                    <div class="gpu-stats">
+                      {% if gpu.utilization_gpu_percent is not none %}
+                        <span class="gpu-util">{{ "%.0f"|format(gpu.utilization_gpu_percent) }}% util</span>
+                      {% endif %}
+                      {% if gpu.temperature_celsius is not none %}
+                        <span class="gpu-temp">{{ gpu.temperature_celsius }}°C</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                  <div class="metric-row">
+                    <div class="metric-label">
+                      <span>Memory</span>
+                      <span class="metric-val">
+                        {{ "%.1f"|format(gpu.memory_used_mb / 1024) }} / {{ "%.1f"|format(gpu.memory_total_mb / 1024) }} GB
+                        <span class="capacity-spec">({{ "%.0f"|format(gpu.memory_used_mb / gpu.memory_total_mb * 100) if gpu.memory_total_mb > 0 else 0 }}%)</span>
+                      </span>
+                    </div>
+                    <div class="progress-bar">
+                      <div class="progress-fill {% if gpu.memory_total_mb > 0 and (gpu.memory_used_mb / gpu.memory_total_mb) > 0.85 %}fill-danger{% elif gpu.memory_total_mb > 0 and (gpu.memory_used_mb / gpu.memory_total_mb) > 0.65 %}fill-warn{% endif %}"
+                           style="width: {{ (gpu.memory_used_mb / gpu.memory_total_mb * 100) if gpu.memory_total_mb > 0 else 0 }}%;"></div>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          <!-- Compute Processes Table -->
+          <div class="section-block">
+            <h3 class="section-subtitle">Active Compute Processes</h3>
+            {% set all_procs = [] %}
+            {% for gpu in server.gpus %}
+              {% for proc in gpu.processes %}
+                {% set _ = all_procs.append(proc) %}
+              {% endfor %}
+            {% endfor %}
+
+            {% if all_procs %}
+              <table class="plans running-table">
+                <thead>
+                  <tr>
+                    <th>GPU</th>
+                    <th>PID</th>
+                    <th>User</th>
+                    <th>Process</th>
+                    <th>Memory</th>
+                    <th>Plan Correlation</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for proc in all_procs %}
+                    <tr>
+                      <td class="when">GPU {{ proc.gpu_id }}</td>
+                      <td><code>{{ proc.pid }}</code></td>
+                      <td><strong>{{ proc.username }}</strong></td>
+                      <td class="proc-name-col">
+                        <code title="{{ proc.process_name }}">{{ proc.process_name }}</code>
+                      </td>
+                      <td class="when">
+                        {% if proc.used_memory_mb is not none %}
+                          {{ "%.0f"|format(proc.used_memory_mb) }} MB
+                        {% else %}
+                          -
+                        {% endif %}
+                      </td>
+                      <td>
+                        {% if proc.correlation.value == "matched" %}
+                          <span class="badge badge-matched">● Matched</span>
+                          {% if proc.matched_plan_title %}
+                            <span class="matched-plan-label" title="{{ proc.matched_plan_title }}">{{ proc.matched_plan_title }}</span>
+                          {% endif %}
+                        {% else %}
+                          <span class="badge badge-unplanned">▲ Unplanned</span>
+                        {% endif %}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            {% else %}
+              <div class="empty-notice">No compute processes currently running on this server.</div>
+            {% endif %}
+          </div>
+
+          <!-- Active Scheduled Intent -->
+          <div class="section-block">
+            <h3 class="section-subtitle">Active Published Intent</h3>
+            {% if server.ongoing_plans %}
+              <ul class="plans-list">
+                {% for plan in server.ongoing_plans %}
+                  <li class="plan-item">
+                    <span class="plan-state-tag tag-ongoing">ONGOING</span>
+                    <span class="plan-title-text" title="{{ plan.title }}"><strong>{{ plan.title }}</strong></span>
+                    <span class="meta-item">
+                      {% if plan.gpu_ids %}
+                        (GPUs: {{ plan.gpu_ids|join(', ') }})
+                      {% elif plan.gpu_count %}
+                        ({{ plan.gpu_count }}x GPU)
+                      {% else %}
+                        (General)
+                      {% endif %}
+                    </span>
+                  </li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <div class="empty-notice">No published plans currently scheduled as ongoing for this server.</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="card-footer">
+          <a href="/schedule?server={{ server.server_key }}" class="btn-schedule">
+            View Schedule →
+          </a>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+{% endblock %}

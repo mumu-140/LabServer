@@ -10,6 +10,7 @@ from labserver_core.api.router import router
 from labserver_core.application.auth_service import AuthService
 from labserver_core.application.passwords import Argon2PasswordHasher
 from labserver_core.application.ports import UnitOfWork
+from labserver_core.application.runtime_store import RuntimeStore
 from labserver_core.config import Settings
 from labserver_core.persistence.database import create_engine_and_session_factory
 from labserver_core.persistence.unit_of_work import SqlAlchemyUnitOfWork
@@ -18,6 +19,7 @@ from labserver_core.persistence.unit_of_work import SqlAlchemyUnitOfWork
 def create_app(
     settings: Settings | None = None,
     metrics_provider: HostMetricsProvider | None = None,
+    runtime_store: RuntimeStore | None = None,
 ) -> FastAPI:
     resolved = settings or Settings.from_environment()
     engine, session_factory = create_engine_and_session_factory(resolved.database_url)
@@ -53,6 +55,7 @@ def create_app(
     app.state.hasher = hasher
     app.state.auth_service = auth_service
     app.state.metrics_provider = provider
+    app.state.runtime_store = runtime_store or RuntimeStore()
     install_exception_handlers(app)
     app.include_router(router)
     return app
