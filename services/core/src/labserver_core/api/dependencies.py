@@ -9,6 +9,8 @@ from labserver_core.application.auth_service import AuthService
 from labserver_core.application.monitoring_service import MonitoringService
 from labserver_core.application.plan_service import PlanService
 from labserver_core.application.ports import UnitOfWork, UnitOfWorkFactory
+from labserver_core.application.runtime_service import RuntimeService
+from labserver_core.application.runtime_store import RuntimeStore
 from labserver_core.application.server_service import ServerService
 from labserver_core.application.user_service import UserService
 
@@ -61,6 +63,34 @@ def get_monitoring_service(
 ) -> MonitoringService:
     metrics_provider: HostMetricsProvider = request.app.state.metrics_provider
     return MonitoringService(uow_factory, metrics_provider)
+
+
+def get_runtime_service(
+    request: Request,
+    uow_factory: Annotated[UnitOfWorkFactory, Depends(get_uow_factory)],
+) -> RuntimeService:
+    store: RuntimeStore = request.app.state.runtime_store
+    threshold: float = request.app.state.settings.runtime_freshness_threshold_seconds
+    return RuntimeService(uow_factory, store, freshness_threshold_seconds=threshold)
+
+
+def verify_collector_token(request: Request) -> None:
+    expected_token = request.app.state.settings.collector_token
+    if not expected_token:
+        return
+
+    auth_header = request.headers.get("Authorization", "")
+    token = ""
+    if auth_header.startswith("Bearer "):
+        token = auth_header[len("Bearer ") :].strip()
+    elif "X-Collector-Token" in request.headers:
+        token = request.headers["X-Collector-Token"].strip()
+
+    if token != expected_token:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid collector token",
+        )
 
 
 
