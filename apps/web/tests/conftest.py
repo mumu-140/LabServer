@@ -5,6 +5,13 @@ from uuid import UUID, uuid4
 import pytest
 from fastapi.testclient import TestClient
 from labserver_contracts.common import UserRole
+from labserver_contracts.monitoring import (
+    DashboardRead,
+    FreshnessStatus,
+    HostMetricsRead,
+    HostStatus,
+    ServerDashboardCard,
+)
 from labserver_contracts.plans import (
     PlanConflictRead,
     PlanCreate,
@@ -13,6 +20,7 @@ from labserver_contracts.plans import (
 )
 from labserver_contracts.servers import ServerRead
 from labserver_contracts.users import UserRead
+
 from labserver_web.app import create_app
 from labserver_web.auth import ViewerContext, get_current_viewer
 from labserver_web.clients.core import CoreClient
@@ -76,15 +84,18 @@ class FakeCoreClient(CoreClient):
         servers: list[ServerRead] | None = None,
         users: list[UserRead] | None = None,
         conflicts: dict[UUID, list[PlanConflictRead]] | None = None,
+        dashboard: DashboardRead | None = None,
     ) -> None:
         self.plans = list(plans or [])
         self.servers = list(servers or [])
         self.users = list(users or [])
         self._conflicts = conflicts or {}
+        self.dashboard = dashboard
         self.calls: list[tuple[str, Any]] = []
         self.error: Exception | None = None
         self.fail_at = 0
         self._call_number = -1
+
 
     def _maybe_fail(self) -> None:
         self._call_number += 1
@@ -170,6 +181,31 @@ class FakeCoreClient(CoreClient):
             cancelled_at="2026-09-15T10:00:00Z",
             display_state="cancelled",
         )
+
+    def get_dashboard(self, *, cookies: dict[str, str] | None = None) -> DashboardRead:
+        self._maybe_fail()
+        self.calls.append(("get_dashboard", cookies))
+        if self.dashboard is not None:
+            return self.dashboard
+        now = datetime.now(UTC)
+        cards = [
+            ServerDashboardCard(
+                server=s,
+                metrics=HostMetricsRead(
+                    server_key=s.key,
+                    status=HostStatus.UP,
+                    freshness=FreshnessStatus.FRESH,
+                    cpu_percent=10.0,
+                    memory_percent=30.0,
+                    disk_percent=40.0,
+                ),
+                active_plans_count=0,
+                near_term_plans=[],
+            )
+            for s in self.servers
+        ]
+        return DashboardRead(cards=cards, observed_at=now)
+
 
 
 def server_read(

@@ -7,9 +7,11 @@ from uuid import UUID
 
 import httpx
 from labserver_contracts.auth import SessionRead
+from labserver_contracts.monitoring import DashboardRead, HostMetricsRead
 from labserver_contracts.plans import PlanConflictRead, PlanCreate, PlanRead, PlanUpdate
 from labserver_contracts.servers import ServerRead
 from labserver_contracts.users import UserRead
+
 
 
 class CoreClientError(Exception):
@@ -121,3 +123,16 @@ class CoreClient:
     def me(self, *, cookies: dict[str, str] | None = None) -> SessionRead:
         response = self._request("GET", "/api/v1/auth/me", cookies=cookies)
         return SessionRead.model_validate(response.json())
+
+    def get_dashboard(self, *, cookies: dict[str, str] | None = None) -> DashboardRead:
+        response = self._request("GET", "/api/v1/monitoring/dashboard", cookies=cookies)
+        return DashboardRead.model_validate(response.json())
+
+    def get_server_metrics(
+        self, server_key: str, *, cookies: dict[str, str] | None = None
+    ) -> HostMetricsRead:
+        response = self._request(
+            "GET", f"/api/v1/monitoring/servers/{server_key}", cookies=cookies
+        )
+        return HostMetricsRead.model_validate(response.json())
+
