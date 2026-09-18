@@ -92,8 +92,20 @@ class UserRepository:
                 enabled=user.enabled,
                 created_at=user.created_at,
                 updated_at=user.updated_at,
+                password_hash=user.password_hash,
             )
         )
+
+    def save(self, user: User) -> None:
+        model = self._session.get(UserModel, user.id)
+        if model is None:
+            raise KeyError(f"User {user.id} does not exist")
+        model.username = user.username
+        model.display_name = user.display_name
+        model.role = user.role.value
+        model.enabled = user.enabled
+        model.password_hash = user.password_hash
+        model.updated_at = user.updated_at
 
     def list_all(self) -> list[User]:
         models = self._session.scalars(select(UserModel).order_by(UserModel.username)).all()
