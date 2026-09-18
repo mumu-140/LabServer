@@ -3,11 +3,13 @@
 {% block content %}
 <div class="dashboard-header">
   <div>
+    <div class="hud-breadcrumb">// COMPUTE ALLOCATION // OPERATIONAL SCHEDULE</div>
     <h1>Schedule</h1>
     <p class="lede">Planned use: who intends to work on which server, and when.</p>
   </div>
   <div class="observed-at">
-    Timezone: {{ timezone_name }}
+    <span class="observed-dot" aria-hidden="true"></span>
+    <span>Timezone: {{ timezone_name }}</span>
   </div>
 </div>
 
