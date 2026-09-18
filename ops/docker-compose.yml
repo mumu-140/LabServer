@@ -61,6 +61,7 @@ services:
       - path: ../.env
         required: false
     environment:
+      LABSERVER_CORE_URL: http://core:8000
       LABSERVER_CORE_BASE_URL: http://core:8000
       LABSERVER_TIMEZONE: ${LABSERVER_TIMEZONE:-Asia/Shanghai}
       LABSERVER_COOKIE_SECURE: ${LABSERVER_COOKIE_SECURE:-false}

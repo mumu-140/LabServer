@@ -30,8 +30,12 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
+    section = config.get_section(config.config_ini_section, {})
+    url = config.get_main_option("sqlalchemy.url")
+    if url and url.startswith("sqlite") and "sqlalchemy.isolation_level" not in section:
+        section["sqlalchemy.isolation_level"] = "AUTOCOMMIT"
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        section,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
