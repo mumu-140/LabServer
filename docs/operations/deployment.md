@@ -80,7 +80,40 @@ The bootstrap CLI refuses to run if an enabled administrator already exists in t
 
 ---
 
-## 4. Routine Operations
+## 4. Initial Fleet Server Seeding
+
+To populate the database with the default fleet servers (`fwq10`, `fwq51`, `fwq56`, `fwq57`):
+
+```bash
+./ops/seed-servers.sh
+```
+
+This script is completely idempotent:
+- Creates missing fleet servers with correct hardware specifications (CPU cores, RAM in GB, GPU count).
+- Updates existing fleet server specifications if changed.
+- Does not modify custom servers or active plan entries.
+
+---
+
+## 5. Beszel Monitoring Integration
+
+LabServer can seamlessly connect to Beszel Hub (PocketBase) to display real-time host status and resource gauges.
+
+### Configuration Variables in `.env`
+
+- `LABSERVER_BESZEL_ENABLED`: Set to `true` (default: `true`).
+- `LABSERVER_BESZEL_HUB_URL`: Internal URL to Beszel Hub (e.g. `http://host.docker.internal:27090` or `http://127.0.0.1:27090`).
+- `LABSERVER_BESZEL_PUBLIC_URL`: Upstream public URL for user deep-links (default: `https://beszel.yangsen666.cloud`).
+- `LABSERVER_BESZEL_USERNAME`: Read-only Beszel PocketBase account username or email.
+- `LABSERVER_BESZEL_PASSWORD`: Read-only Beszel PocketBase account password.
+- `LABSERVER_BESZEL_CACHE_TTL_SECONDS`: In-memory cache TTL for metrics (default: `15` seconds).
+- `LABSERVER_BESZEL_TIMEOUT_SECONDS`: Request timeout to Hub API (default: `5` seconds).
+
+If Beszel is disabled, unreachable, or credentials are invalid, LabServer falls back gracefully to `HostStatus.UNREACHABLE` without crashing or blocking dashboard rendering.
+
+---
+
+## 6. Routine Operations
 
 ### Checking Service Status
 
@@ -103,7 +136,7 @@ docker compose -f ops/docker-compose.yml logs -f web
 
 ---
 
-## 5. Backup & Disaster Recovery
+## 7. Backup & Disaster Recovery
 
 ### Online Consistent Backup
 
@@ -135,7 +168,7 @@ The script:
 
 ---
 
-## 6. Upgrade & Rollback Protocol
+## 8. Upgrade & Rollback Protocol
 
 ### Performing an Upgrade
 
