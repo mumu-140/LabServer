@@ -16,7 +16,15 @@ echo "=================================================="
 
 # 1. Healthz checks
 echo -n "[1/14] Testing Core /healthz... "
-CORE_HEALTH="$(curl -s -f --noproxy "*" "${CORE_URL}/healthz")"
+CORE_HEALTH=""
+for _ in $(seq 1 15); do
+    if CORE_HEALTH="$(curl -s -f --noproxy "*" "${CORE_URL}/healthz" 2>/dev/null)"; then
+        if [[ "${CORE_HEALTH}" == *'"status":"ok"'* ]] || [[ "${CORE_HEALTH}" == *'"status": "ok"'* ]]; then
+            break
+        fi
+    fi
+    sleep 1
+done
 if [[ "${CORE_HEALTH}" != *'"status":"ok"'* ]] && [[ "${CORE_HEALTH}" != *'"status": "ok"'* ]]; then
     echo "FAILED: unexpected response: ${CORE_HEALTH}"
     exit 1
@@ -24,7 +32,15 @@ fi
 echo "OK"
 
 echo -n "[2/14] Testing Web /healthz... "
-WEB_HEALTH="$(curl -s -f --noproxy "*" "${WEB_URL}/healthz")"
+WEB_HEALTH=""
+for _ in $(seq 1 15); do
+    if WEB_HEALTH="$(curl -s -f --noproxy "*" "${WEB_URL}/healthz" 2>/dev/null)"; then
+        if [[ "${WEB_HEALTH}" == *'"status":"ok"'* ]] || [[ "${WEB_HEALTH}" == *'"status": "ok"'* ]]; then
+            break
+        fi
+    fi
+    sleep 1
+done
 if [[ "${WEB_HEALTH}" != *'"status":"ok"'* ]] && [[ "${WEB_HEALTH}" != *'"status": "ok"'* ]]; then
     echo "FAILED: unexpected response: ${WEB_HEALTH}"
     exit 1
