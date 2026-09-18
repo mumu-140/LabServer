@@ -116,3 +116,18 @@ def test_logout_clears_cookie_and_redirects(web_client: TestClient):
     assert res.headers["location"] == "/login"
 
     assert web_client.get("/schedule").status_code == 401
+
+
+def test_unauthenticated_request_renders_login_template_with_401(web_client: TestClient):
+    res = web_client.get("/schedule")
+    assert res.status_code == 401
+    assert "Log in to LabServer" in res.text
+    assert "<form" in res.text
+    assert 'class="main-nav"' not in res.text
+
+
+def test_unauthenticated_json_request_returns_json_401(web_client: TestClient):
+    res = web_client.get("/schedule", headers={"accept": "application/json"})
+    assert res.status_code == 401
+    assert res.json() == {"detail": "Authentication required"}
+
