@@ -4,21 +4,23 @@ Last updated: 2026-09-16
 
 ## Status
 
-M1.1 simple planning is merged and verified on `main`. It has not been deployed.
+M1.1 simple planning and M1.1H web hardening are merged and verified on `main`. Neither is deployed.
 
-M1.1H web hardening is implemented on branch `fix/m1-1h-web-hardening` and is under review (pull request pending merge). It has not been deployed.
+M2-A production auth adapter design is proposed (`docs/superpowers/specs/2026-09-16-m2-auth-adapter-design.md`) and awaiting approval. Nothing else in M2 has started.
 
 ## Main baseline
 
-M1.1 was squash-merged through PR #4:
+M1.1H was squash-merged through PR #5:
 
-- main commit: `a2ce4a924cb017c3730fa393dc9f78d6fb882407`;
-- merged-main CI run: `35036877089`;
+- main commit: `3e7eacc3e5850e5c10a679fbe3c15d55189788fd`;
+- merged-main CI run: `35079558365` (success);
 - locked `uv sync`: success;
 - Ruff: success;
-- mypy across Core + contracts + Web: success;
-- pytest: `97 passed` (2 dependency deprecation warnings);
+- mypy across Core + contracts + Web: success (42 files);
+- pytest: `141 passed`;
 - no production deployment has occurred.
+
+M1.1 itself was squash-merged through PR #4 (main commit `a2ce4a924cb017c3730fa393dc9f78d6fb882407`, merged-main CI run `35036877089`, `97 passed` at that point).
 
 ## M1.1 delivered
 
@@ -53,7 +55,7 @@ Implementation plan:
 
 `docs/superpowers/plans/2026-09-16-m1-1h-web-hardening.md`
 
-Status: Tasks 1-7 of the plan are implemented as commits on the branch (member-readable user directory; standalone-capacity warning; explicit `LABSERVER_TIMEZONE` semantics; deterministic schedule filters/dates; default-deny `ViewerContext` with owner/admin edit controls; normalized form/Core/network failures; corrected docs and architecture guards). M1.1H is under review and NOT DEPLOYED. Do not describe M1.1H as merged until `main` actually contains it.
+Status: Tasks 1-7 are implemented, merged to `main` through PR #5 (squash commit `3e7eacc3e5850e5c10a679fbe3c15d55189788fd`) with merged-main CI green (run `35079558365`). M1.1H is NOT DEPLOYED.
 
 ## M1.1H issues (closed by the branch)
 
@@ -87,12 +89,14 @@ The Web will gain a default-deny `ViewerContext` seam for correct owner/admin re
 
 ## Next gate
 
-1. Execute `docs/superpowers/plans/2026-09-16-m1-1h-web-hardening.md` task-by-task from the planning branch.
-2. Verify the exact final implementation head: locked sync, Ruff, mypy, pytest, migration smoke, Core/API smoke, Web smoke, architecture guards, terminology and secret/private-infra scans.
-3. Review the final diff against the M1.1H spec.
-4. Merge only after final-head CI is green.
-5. Verify merged-main CI.
-6. Only then begin M2: Docker-first deployment + Beszel primary monitoring + minimal read-only Runtime Collector + production auth/deployment integration.
+M1.1 and M1.1H are both merged with merged-main CI green; the previous gate list is complete.
+
+M2 begins from the auth adapter, because both auth seams are hard default-deny and nothing is usable by a human:
+
+1. Approve (or amend) the M2-A auth adapter design (`docs/superpowers/specs/2026-09-16-m2-auth-adapter-design.md`), then produce its implementation plan.
+2. Implement the auth slice with the same task/commit/test discipline as M1.1/M1.1H.
+3. Only then the deployment form (Docker/compose/`ops/`, loopback-only validation) as a separate approved slice.
+4. Beszel primary monitoring + minimal read-only Runtime Collector come after; a public reverse-proxy mount is its own separately approved change.
 
 ## Important constraints
 
