@@ -1,8 +1,15 @@
 {% extends "base.html" %}
 {% block title %}Schedule — LabServer{% endblock %}
 {% block content %}
-<h1>Schedule</h1>
-<p class="lede">Planned use: who intends to work on which server, and when.</p>
+<div class="dashboard-header">
+  <div>
+    <h1>Schedule</h1>
+    <p class="lede">Planned use: who intends to work on which server, and when.</p>
+  </div>
+  <div class="observed-at">
+    Timezone: {{ timezone_name }}
+  </div>
+</div>
 
 <form class="filters" method="get" action="/schedule">
   <label>Server
@@ -12,6 +19,7 @@
       <option value="{{ item.key }}" {% if item.key == server_key %}selected{% endif %}>{{ item.key }}</option>
       {% endfor %}
     </select>
+  </label>
   <label>Owner
     <select name="owner">
       <option value="">All owners</option>
@@ -24,8 +32,6 @@
     <input type="date" name="date" value="{{ date }}" />
   </label>
   <span class="tz-label">Timezone: {{ timezone_name }}</span>
-    <input type="date" name="date" value="{{ date }}" />
-  </label>
   <button type="submit">Filter</button>
   <a class="clear" href="/schedule">Clear</a>
 </form>
