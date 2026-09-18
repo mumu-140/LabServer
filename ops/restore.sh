@@ -67,7 +67,7 @@ echo "==> Waiting for core healthcheck..."
 sleep 3
 docker compose -f "${COMPOSE_FILE}" exec -T core python3 -c "
 import urllib.request
-resp = urllib.request.urlopen('http://127.0.0.1:8000/healthz')
+resp = urllib.request.urlopen('http://127.0.0.1:18281/healthz')
 assert resp.status == 200
 print('Core health status: 200 OK')
 "

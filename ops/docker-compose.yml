@@ -14,7 +14,7 @@ services:
     container_name: labserver-core
     restart: unless-stopped
     entrypoint: ["/app/ops/entrypoint-core.sh"]
-    command: ["uvicorn", "labserver_core.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    command: ["uvicorn", "labserver_core.app:app", "--host", "0.0.0.0", "--port", "18281"]
     env_file:
       - path: .env
         required: false
@@ -40,11 +40,11 @@ services:
     volumes:
       - ${LABSERVER_DATA_DIR:-../data}:/data
     ports:
-      - "127.0.0.1:${LABSERVER_CORE_PORT:-18281}:8000"
+      - "127.0.0.1:${LABSERVER_CORE_PORT:-18281}:18281"
     networks:
       - labserver-net
     healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:18281/healthz')"]
       interval: 10s
       timeout: 3s
       retries: 3
@@ -62,7 +62,7 @@ services:
     image: labserver:local
     container_name: labserver-web
     restart: unless-stopped
-    command: ["uvicorn", "labserver_web.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    command: ["uvicorn", "labserver_web.app:app", "--host", "0.0.0.0", "--port", "18280"]
     depends_on:
       core:
         condition: service_healthy
@@ -72,16 +72,16 @@ services:
       - path: ../.env
         required: false
     environment:
-      LABSERVER_CORE_URL: http://core:8000
-      LABSERVER_CORE_BASE_URL: http://core:8000
+      LABSERVER_CORE_URL: http://core:18281
+      LABSERVER_CORE_BASE_URL: http://core:18281
       LABSERVER_TIMEZONE: ${LABSERVER_TIMEZONE:-Asia/Shanghai}
       LABSERVER_COOKIE_SECURE: ${LABSERVER_COOKIE_SECURE:-false}
     ports:
-      - "127.0.0.1:${LABSERVER_WEB_PORT:-18280}:8000"
+      - "127.0.0.1:${LABSERVER_WEB_PORT:-18280}:18280"
     networks:
       - labserver-net
     healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:18280/healthz')"]
       interval: 10s
       timeout: 3s
       retries: 3

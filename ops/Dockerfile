@@ -60,6 +60,6 @@ RUN chmod +x /app/ops/entrypoint-core.sh
 
 USER labserver
 
-EXPOSE 8000
+EXPOSE 18280 18281
 
-CMD ["uvicorn", "labserver_core.app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "labserver_core.app:app", "--host", "0.0.0.0", "--port", "18281"]

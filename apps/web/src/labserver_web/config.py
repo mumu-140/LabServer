@@ -10,7 +10,7 @@ import os
 from dataclasses import dataclass
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-DEFAULT_CORE_BASE_URL = "http://127.0.0.1:8000"
+DEFAULT_CORE_BASE_URL = "http://127.0.0.1:18281"
 DEFAULT_TIMEZONE_NAME = "UTC"
 
 
