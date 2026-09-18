@@ -12,11 +12,13 @@
       <div class="header-inner">
         <div class="brand-nav">
           <a class="brand" href="/">LabServer</a>
+          {% if viewer %}
           <nav class="main-nav">
             <a class="nav-link {% if active_tab == 'dashboard' %}active{% endif %}" href="/">Dashboard</a>
             <a class="nav-link {% if active_tab == 'running' %}active{% endif %}" href="/running">Running</a>
             <a class="nav-link {% if active_tab == 'schedule' %}active{% endif %}" href="/schedule">Schedule</a>
           </nav>
+          {% endif %}
         </div>
         {% if viewer %}
         <div class="user-nav">
