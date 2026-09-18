@@ -6,6 +6,7 @@ from typing import Any
 from uuid import UUID
 
 import httpx
+from labserver_contracts.auth import SessionRead
 from labserver_contracts.plans import PlanConflictRead, PlanCreate, PlanRead, PlanUpdate
 from labserver_contracts.servers import ServerRead
 from labserver_contracts.users import UserRead
@@ -103,3 +104,20 @@ class CoreClient:
     def list_conflicts(self, plan_id: UUID) -> list[PlanConflictRead]:
         payload = self._request("GET", f"/api/v1/plans/{plan_id}/conflicts").json()
         return [PlanConflictRead.model_validate(item) for item in payload]
+
+    def login(self, username: str, password: str) -> tuple[SessionRead, str]:
+        response = self._request(
+            "POST",
+            "/api/v1/auth/login",
+            json={"username": username, "password": password},
+        )
+        session = SessionRead.model_validate(response.json())
+        token = response.cookies.get("labserver_session") or ""
+        return session, token
+
+    def logout(self, *, cookies: dict[str, str] | None = None) -> None:
+        self._request("POST", "/api/v1/auth/logout", cookies=cookies)
+
+    def me(self, *, cookies: dict[str, str] | None = None) -> SessionRead:
+        response = self._request("GET", "/api/v1/auth/me", cookies=cookies)
+        return SessionRead.model_validate(response.json())
