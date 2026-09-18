@@ -26,6 +26,22 @@ def test_monitoring_enums_are_stable() -> None:
     ]
 
 
+def test_gpu_metrics_read() -> None:
+    gpu = GpuMetricsRead(
+        index=0,
+        name="NVIDIA A100-PCIE-40GB",
+        utilization_percent=50.0,
+        memory_used_gb=20.0,
+        memory_total_gb=40.0,
+        temperature_c=62,
+    )
+    dumped = gpu.model_dump(mode="json")
+    assert dumped["index"] == 0
+    assert dumped["utilization_percent"] == 50.0
+    assert dumped["temperature_c"] == 62
+
+
+
 def test_host_metrics_read_serialization() -> None:
     metrics = HostMetricsRead.model_validate(
         {
