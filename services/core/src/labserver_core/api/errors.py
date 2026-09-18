@@ -9,6 +9,7 @@ from labserver_core.domain.errors import (
     Forbidden,
     NotFound,
     ServerDisabled,
+    UnknownCredentials,
 )
 
 
@@ -17,6 +18,8 @@ def _body(code: str, message: str) -> dict[str, dict[str, str]]:
 
 
 def _domain_status(error: DomainError) -> int:
+    if isinstance(error, UnknownCredentials):
+        return status.HTTP_401_UNAUTHORIZED
     if isinstance(error, Forbidden):
         return status.HTTP_403_FORBIDDEN
     if isinstance(error, NotFound):

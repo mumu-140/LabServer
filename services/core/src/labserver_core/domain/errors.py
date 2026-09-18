@@ -13,6 +13,13 @@ class Forbidden(DomainError):
     code = "forbidden"
 
 
+class UnknownCredentials(DomainError):
+    code = "unauthorized"
+
+    def __init__(self, message: str = "Invalid username or password") -> None:
+        super().__init__(message)
+
+
 class ServerDisabled(DomainError):
     code = "server_disabled"
 
