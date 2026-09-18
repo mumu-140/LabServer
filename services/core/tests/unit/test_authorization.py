@@ -120,10 +120,13 @@ def factory_for(uow: FakeUnitOfWork) -> Callable[[], FakeUnitOfWork]:
 
 
 def test_http_actor_dependency_is_default_deny() -> None:
+    from starlette.requests import Request
+    request = Request({"type": "http", "headers": []})
     with pytest.raises(HTTPException) as exc_info:
-        get_current_actor()
+        get_current_actor(request, None)  # type: ignore[arg-type]
 
     assert exc_info.value.status_code == 401
+    assert exc_info.value.detail == "Authentication required" 
 
 
 def test_member_cannot_perform_admin_actions() -> None:

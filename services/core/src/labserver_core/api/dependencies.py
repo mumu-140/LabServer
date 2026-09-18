@@ -4,22 +4,34 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, Request, status
 
 from labserver_core.application.actors import CurrentActor
+from labserver_core.application.auth_service import AuthService
 from labserver_core.application.plan_service import PlanService
 from labserver_core.application.ports import UnitOfWork, UnitOfWorkFactory
 from labserver_core.application.server_service import ServerService
 from labserver_core.application.user_service import UserService
 
 
-def get_current_actor() -> CurrentActor:
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Authentication adapter is not configured",
-    )
-
-
 def get_uow_factory(request: Request) -> UnitOfWorkFactory:
     factory: Callable[[], UnitOfWork] = request.app.state.uow_factory
     return factory
+
+
+def get_auth_service(request: Request) -> AuthService:
+    service: AuthService = request.app.state.auth_service
+    return service
+
+
+def get_current_actor(
+    request: Request,
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+) -> CurrentActor:
+    token = request.cookies.get("labserver_session")
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+        )
+    return auth_service.resolve(token)
 
 
 def get_user_service(
