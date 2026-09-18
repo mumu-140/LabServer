@@ -1,13 +1,10 @@
 from dataclasses import replace
 from datetime import UTC, datetime
-from uuid import uuid4
 
 from labserver_contracts.common import UserRole
 from labserver_contracts.runtime import RuntimeStatus
-from labserver_core.domain.entities import ManagedServer, PlanEntry, ServerCapacity
-from labserver_core.persistence.repositories import PlanRepository, ServerRepository
 
-from .conftest import MEMBER_ID, SERVER_ID, ApiContext
+from .conftest import MEMBER_ID, ApiContext
 
 
 def test_unauthenticated_runtime_endpoints_return_401(api_context: ApiContext) -> None:
