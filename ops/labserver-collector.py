@@ -6,6 +6,8 @@ and active GPU compute processes, resolves OS process owners, and reports to
 LabServer Core via HTTP POST.
 """
 
+from __future__ import annotations
+
 import argparse
 import json
 import os
@@ -14,8 +16,14 @@ import subprocess
 import sys
 import urllib.error
 import urllib.request
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Any
+
+try:
+    from datetime import UTC
+except ImportError:
+    UTC = timezone.utc
+
 
 
 def get_process_username(pid: int) -> str:
