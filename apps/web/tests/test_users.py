@@ -1,9 +1,6 @@
-from uuid import uuid4
-
 from fastapi.testclient import TestClient
-from labserver_contracts.common import UserRole
 
-from .conftest import ALICE_ID, BOB_ID, FakeCoreClient, user_read
+from .conftest import ALICE_ID, BOB_ID, FakeCoreClient
 
 
 def test_anonymous_cannot_access_users(anonymous_client: TestClient) -> None:

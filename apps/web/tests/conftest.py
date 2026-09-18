@@ -154,7 +154,9 @@ class FakeCoreClient(CoreClient):
                 updated = UserRead(
                     id=u.id,
                     username=u.username,
-                    display_name=data.display_name if data.display_name is not None else u.display_name,
+                    display_name=(
+                        data.display_name if data.display_name is not None else u.display_name
+                    ),
                     role=data.role if data.role is not None else u.role,
                     enabled=data.enabled if data.enabled is not None else u.enabled,
                     created_at=u.created_at,

@@ -69,7 +69,9 @@ class UserService:
             now = self._clock()
             updated = replace(
                 user,
-                display_name=data.display_name if data.display_name is not None else user.display_name,
+                display_name=(
+                    data.display_name if data.display_name is not None else user.display_name
+                ),
                 role=data.role if data.role is not None else user.role,
                 enabled=data.enabled if data.enabled is not None else user.enabled,
                 updated_at=now,
