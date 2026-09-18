@@ -1,0 +1,83 @@
+name: labserver
+
+services:
+  core:
+    build:
+      context: ..
+      dockerfile: ops/Dockerfile
+      args:
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        http_proxy: ${HTTP_PROXY:-}
+        https_proxy: ${HTTPS_PROXY:-}
+    image: labserver:local
+    container_name: labserver-core
+    restart: unless-stopped
+    entrypoint: ["/app/ops/entrypoint-core.sh"]
+    command: ["uvicorn", "labserver_core.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    env_file:
+      - path: .env
+        required: false
+      - path: ../.env
+        required: false
+    environment:
+      LABSERVER_DATABASE_URL: sqlite:////data/labserver.db
+      LABSERVER_ENV: ${LABSERVER_ENV:-production}
+      LABSERVER_SECRET_KEY: ${LABSERVER_SECRET_KEY:-}
+      LABSERVER_TIMEZONE: ${LABSERVER_TIMEZONE:-Asia/Shanghai}
+      LABSERVER_COOKIE_SECURE: ${LABSERVER_COOKIE_SECURE:-false}
+    volumes:
+      - ${LABSERVER_DATA_DIR:-../data}:/data
+    ports:
+      - "127.0.0.1:${LABSERVER_CORE_PORT:-18281}:8000"
+    networks:
+      - labserver-net
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  web:
+    build:
+      context: ..
+      dockerfile: ops/Dockerfile
+      args:
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        http_proxy: ${HTTP_PROXY:-}
+        https_proxy: ${HTTPS_PROXY:-}
+    image: labserver:local
+    container_name: labserver-web
+    restart: unless-stopped
+    command: ["uvicorn", "labserver_web.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    depends_on:
+      core:
+        condition: service_healthy
+    env_file:
+      - path: .env
+        required: false
+      - path: ../.env
+        required: false
+    environment:
+      LABSERVER_CORE_BASE_URL: http://core:8000
+      LABSERVER_TIMEZONE: ${LABSERVER_TIMEZONE:-Asia/Shanghai}
+      LABSERVER_COOKIE_SECURE: ${LABSERVER_COOKIE_SECURE:-false}
+    ports:
+      - "127.0.0.1:${LABSERVER_WEB_PORT:-18280}:8000"
+    networks:
+      - labserver-net
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+networks:
+  labserver-net:
+    name: labserver-net
+    ipam:
+      config:
+        - subnet: 10.255.30.0/24
