@@ -20,8 +20,8 @@ from labserver_contracts.plans import (
 )
 from labserver_contracts.servers import ServerRead
 from labserver_contracts.users import UserRead
-
 from labserver_web.app import create_app
+
 from labserver_web.auth import ViewerContext, get_current_viewer
 from labserver_web.clients.core import CoreClient
 from labserver_web.config import WebSettings

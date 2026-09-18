@@ -15,8 +15,8 @@ from labserver_web.clients.core import CoreClientError
 from .conftest import FakeCoreClient, server_read
 
 
-
 def test_anonymous_dashboard_is_401(anonymous_client: TestClient) -> None:
+
     resp_root = anonymous_client.get("/")
     assert resp_root.status_code == 401
 
@@ -95,10 +95,19 @@ def test_authenticated_member_sees_dashboard_cards(
 def test_dashboard_renders_status_badges(
     client: TestClient, fake_core: FakeCoreClient
 ) -> None:
-    s1 = server_read(server_id=UUID("00000000-0000-0000-0000-000000000011"), key="fwq51", display_name="fwq51")
-    s2 = server_read(server_id=UUID("00000000-0000-0000-0000-000000000012"), key="fwq56", display_name="fwq56")
+    s1 = server_read(
+        server_id=UUID("00000000-0000-0000-0000-000000000011"),
+        key="fwq51",
+        display_name="fwq51",
+    )
+    s2 = server_read(
+        server_id=UUID("00000000-0000-0000-0000-000000000012"),
+        key="fwq56",
+        display_name="fwq56",
+    )
 
     now = datetime.now(UTC)
+
     dashboard = DashboardRead(
         cards=[
             ServerDashboardCard(

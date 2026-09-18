@@ -13,8 +13,8 @@ from labserver_contracts.servers import ServerRead
 from labserver_contracts.users import UserRead
 
 
-
 class CoreClientError(Exception):
+
     """Core responded with a non-success status; carries the error envelope."""
 
     def __init__(self, status_code: int, code: str, message: str) -> None:
