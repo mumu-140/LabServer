@@ -1,17 +1,17 @@
 {% extends "base.html" %}
 
-{% block title %}User Management — LabServer{% endblock %}
+{% block title %}成员管理 — 实验室算力中枢{% endblock %}
 
 {% block content %}
 <div class="dashboard-header">
   <div>
-    <div class="hud-breadcrumb">// IDENTITY ACCESS // PERSONNEL DIRECTORY</div>
-    <h1>User Management</h1>
-    <p class="lede">Provision member credentials, assign privilege tiers, and manage account access status.</p>
+    <div class="hud-breadcrumb">// 身份鉴权 · 人员名录中枢</div>
+    <h1>实验室成员管理 <span class="sr-only">User Management</span></h1>
+    <p class="lede">录入实验室成员凭据、配置权限等级，以及管理成员账户启停状态。</p>
   </div>
   <div class="observed-at">
     <span class="observed-dot" aria-hidden="true"></span>
-    <span>Total Accounts: {{ users|length }}</span>
+    <span>成员总数：{{ users|length }} 位</span>
   </div>
 </div>
 
@@ -38,22 +38,22 @@
 
 <div class="users-layout">
   <!-- Personnel Directory Card -->
-  <section class="card users-card" aria-label="Personnel Directory">
+  <section class="card users-card" aria-label="人员名录一览">
     <div class="card-header">
       <div class="card-title-group">
-        <h2 class="card-title" style="margin: 0; font-size: 17px;">Personnel Directory</h2>
-        <span class="card-key">{{ users|length }} accounts active</span>
+        <h2 class="card-title" style="margin: 0; font-size: 17px;">人员名录一览</h2>
+        <span class="card-key">{{ users|length }} 位成员在籍</span>
       </div>
     </div>
     <div class="card-body" style="padding: 0; overflow-x: auto;">
       <table class="plans users-table">
         <thead>
           <tr>
-            <th>Username</th>
-            <th>Display Name</th>
-            <th>Role</th>
-            <th>Status</th>
-            <th>Account Actions</th>
+            <th>用户名</th>
+            <th>显示名称</th>
+            <th>权限等级</th>
+            <th>账户状态</th>
+            <th>操作管理</th>
           </tr>
         </thead>
         <tbody>
@@ -67,16 +67,16 @@
             </td>
             <td>
               {% if u.role.value == 'admin' %}
-                <span class="role-badge role-badge-admin">Admin</span>
+                <span class="role-badge role-badge-admin">管理员</span>
               {% else %}
-                <span class="role-badge role-badge-member">Member</span>
+                <span class="role-badge role-badge-member">研究员</span>
               {% endif %}
             </td>
             <td>
               {% if u.enabled %}
-                <span class="status-badge status-badge-active">● Active</span>
+                <span class="status-badge status-badge-active">● 正常使用</span>
               {% else %}
-                <span class="status-badge status-badge-disabled">■ Disabled</span>
+                <span class="status-badge status-badge-disabled">■ 已封禁</span>
               {% endif %}
             </td>
             <td>
@@ -86,19 +86,19 @@
                 <form method="post" action="/users/{{ u.id }}/toggle" class="action-form">
                   <input type="hidden" name="enabled" value="{% if u.enabled %}false{% else %}true{% endif %}">
                   <button type="submit" class="action-btn-sm {% if u.enabled %}btn-toggle-disable{% else %}btn-toggle-enable{% endif %}">
-                    {% if u.enabled %}Disable{% else %}Enable{% endif %}
+                    {% if u.enabled %}封禁停用{% else %}恢复启用{% endif %}
                   </button>
                 </form>
                 {% else %}
-                <span class="self-tag">Current Account</span>
+                <span class="self-tag">当前登录账号</span>
                 {% endif %}
 
                 <!-- Password Reset Trigger / Mini Form -->
                 <details class="reset-details">
-                  <summary class="action-btn-sm btn-reset-toggle">Reset Key</summary>
+                  <summary class="action-btn-sm btn-reset-toggle">重置密码</summary>
                   <form method="post" action="/users/{{ u.id }}/password" class="reset-inline-form">
-                    <input type="password" name="password" placeholder="New password (8+ chars)" minlength="8" required class="reset-input">
-                    <button type="submit" class="action-btn-sm btn-confirm-reset">Save</button>
+                    <input type="password" name="password" placeholder="新密码（最少 8 位）" minlength="8" required class="reset-input">
+                    <button type="submit" class="action-btn-sm btn-confirm-reset">确认保存</button>
                   </form>
                 </details>
               </div>
@@ -111,40 +111,40 @@
   </section>
 
   <!-- Provision Member Card -->
-  <section class="card provision-card" aria-label="Provision New Member">
+  <section class="card provision-card" aria-label="录入新成员">
     <div class="card-header">
       <div class="card-title-group">
-        <h2 class="card-title" style="margin: 0; font-size: 17px;">Provision New Member</h2>
+        <h2 class="card-title" style="margin: 0; font-size: 17px;">录入新成员</h2>
         <span class="card-key">AUTH_GEN_V1</span>
       </div>
     </div>
     <div class="card-body">
       <form method="post" action="/users" class="provision-form">
         <div class="form-group">
-          <label for="reg-username">Username</label>
-          <input id="reg-username" name="username" type="text" placeholder="e.g. scientist_01" required autocomplete="off">
-          <span class="form-help">Unique handle for CLI & Web logins</span>
+          <label for="reg-username">登录用户名</label>
+          <input id="reg-username" name="username" type="text" placeholder="例如：scientist_01" required autocomplete="off">
+          <span class="form-help">用于 CLI 命令行工具与 Web 页面登录</span>
         </div>
 
         <div class="form-group">
-          <label for="reg-display-name">Display Name</label>
-          <input id="reg-display-name" name="display_name" type="text" placeholder="e.g. Dr. Alice Chen" required autocomplete="off">
-          <span class="form-help">Readable identity on telemetry dashboards</span>
+          <label for="reg-display-name">成员显示名</label>
+          <input id="reg-display-name" name="display_name" type="text" placeholder="例如：陈研究员" required autocomplete="off">
+          <span class="form-help">在监控总览与算力排期中的署名标识</span>
         </div>
 
         <div class="form-group">
-          <label for="reg-role">Privilege Tier</label>
+          <label for="reg-role">权限等级</label>
           <select id="reg-role" name="role" required>
-            <option value="member" selected>Member (Compute Allocation Access)</option>
-            <option value="admin">Administrator (Full Access + User Mgmt)</option>
+            <option value="member" selected>研究员（仅查看与预约算力）</option>
+            <option value="admin">管理员（具备全系统管理与成员开户权）</option>
           </select>
-          <span class="form-help">Determines administrative and scheduling rights</span>
+          <span class="form-help">决定系统后台与排期修改的管理权限</span>
         </div>
 
         <div class="form-group">
-          <label for="reg-password">Initial Password</label>
-          <input id="reg-password" name="password" type="password" placeholder="Minimum 8 characters" minlength="8" required autocomplete="new-password">
-          <span class="form-help">Member can use this credential immediately</span>
+          <label for="reg-password">初始密码</label>
+          <input id="reg-password" name="password" type="password" placeholder="最少 8 位字符" minlength="8" required autocomplete="new-password">
+          <span class="form-help">创建后成员即可直接使用此密码登录</span>
         </div>
 
         <button type="submit" class="provision-submit-btn">
@@ -152,7 +152,7 @@
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="19" y2="12"></line>
           </svg>
-          Provision Member Account
+          录入并激活成员账号
         </button>
       </form>
     </div>

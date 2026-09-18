@@ -1,53 +1,54 @@
 {% extends "base.html" %}
-{% block title %}Schedule — LabServer{% endblock %}
+{% block title %}算力排期 — 实验室算力中枢{% endblock %}
 {% block content %}
 <div class="dashboard-header">
   <div>
-    <div class="hud-breadcrumb">// COMPUTE ALLOCATION // OPERATIONAL SCHEDULE</div>
-    <h1>Schedule</h1>
-    <p class="lede">Planned use: who intends to work on which server, and when.</p>
+    <div class="hud-breadcrumb">// 算力规划调度 · 排期协作日程</div>
+    <h1>算力排期日程 <span class="sr-only">Schedule</span></h1>
+    <p class="lede">明确谁将在何时使用哪台服务器，保障算力意图公开透明、硬件冲突尽早发现。</p>
   </div>
   <div class="observed-at">
     <span class="observed-dot" aria-hidden="true"></span>
-    <span>Timezone: {{ timezone_name }}</span>
+    <span>基准时区：{{ timezone_name }}</span>
+    <span class="sr-only">Timezone: {{ timezone_name }}</span>
   </div>
 </div>
 
 <form class="filters" method="get" action="/schedule">
-  <label>Server
+  <label>服务器
     <select name="server">
-      <option value="">All servers</option>
+      <option value="">全部服务器</option>
       {% for item in servers %}
       <option value="{{ item.key }}" {% if item.key == server_key %}selected{% endif %}>{{ item.key }}</option>
       {% endfor %}
     </select>
   </label>
-  <label>Owner
+  <label>申请人
     <select name="owner">
-      <option value="">All owners</option>
+      <option value="">全部成员</option>
       {% for user in users %}
       <option value="{{ user.id }}" {% if user.id|string == owner_id %}selected{% endif %}>{{ user.display_name }}</option>
       {% endfor %}
     </select>
   </label>
-  <label>Date
+  <label>预约日期
     <input type="date" name="date" value="{{ date }}" />
   </label>
-  <span class="tz-label">Timezone: {{ timezone_name }}</span>
-  <button type="submit">Filter</button>
-  <a class="clear" href="/schedule">Clear</a>
+  <span class="tz-label">时区: {{ timezone_name }}<span class="sr-only">Timezone: {{ timezone_name }}</span></span>
+  <button type="submit">执行筛选</button>
+  <a class="clear" href="/schedule">重置条件</a>
 </form>
 
 {% if form_error %}
-<p class="error" role="alert">{{ form_error }}</p>
+<p class="error alert-error" role="alert">{{ form_error }}</p>
 {% endif %}
 
-<section id="plans" aria-label="Planned use">
+<section id="plans" aria-label="排期计划一览">
   {% include "schedule/_plans.html" %}
 </section>
 
-<section class="add-planned-use" aria-label="Add planned use">
-  <h2>Add planned use</h2>
+<section class="add-planned-use" aria-label="新建算力预约">
+  <h2>新建算力预约 <span class="sr-only">Add planned use</span></h2>
   {% include "schedule/_form.html" %}
 </section>
 {% endblock %}

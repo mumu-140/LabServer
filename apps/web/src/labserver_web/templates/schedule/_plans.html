@@ -5,25 +5,44 @@
   <div style="overflow-x: auto;">
     <table class="plans">
       <thead>
-        <tr><th>When</th><th>Who</th><th>Planned use</th><th>Resources</th><th>Status</th><th></th></tr>
+        <tr><th>时段窗口</th><th>申请人</th><th>预约规划意图</th><th>申请计算资源</th><th>状态</th><th>操作</th></tr>
       </thead>
       <tbody>
         {% for row in group.rows %}
         <tr>
           <td class="when">{{ row.window }}</td>
-          <td>{{ row.owner }}</td>
+          <td><strong>{{ row.owner }}</strong></td>
           <td>
-            {{ row.plan.title }}
-            {% if row.plan.project %}<span class="project">({{ row.plan.project }})</span>{% endif %}
-            {% if row.overlap %}<span class="overlap-warning">Overlap warning</span>{% endif %}
+            <span class="plan-title-cell">{{ row.plan.title }}</span>
+            {% if row.plan.project %}<span class="project">项目: {{ row.plan.project }}</span>{% endif %}
+            {% if row.overlap %}
+              <span class="overlap-warning">
+                <span>⚠ 冲突预警</span>
+                <span class="sr-only">Overlap warning</span>
+              </span>
+            {% endif %}
           </td>
-          <td class="resources">{{ row.resources or "not declared" }}</td>
-          <td><span class="display-state state-{{ row.plan.display_state.value }}">{{ row.plan.display_state.value }}</span></td>
+          <td class="resources">{{ row.resources or "未指定资源规格" }}</td>
+          <td>
+            <span class="display-state state-{{ row.plan.display_state.value }}">
+              {% if row.plan.display_state.value == 'ongoing' %}进行中
+              {% elif row.plan.display_state.value == 'upcoming' %}待启动
+              {% elif row.plan.display_state.value == 'cancelled' %}已撤销
+              {% else %}已结束{% endif %}
+              <span class="sr-only">{{ row.plan.display_state.value }}</span>
+            </span>
+          </td>
           <td style="white-space: nowrap; text-align: right;">
             {% if row.can_change and row.plan.cancelled_at is none %}
-            <a class="edit" href="/schedule/{{ row.plan.id }}/edit">Edit</a>
+            <a class="edit" href="/schedule/{{ row.plan.id }}/edit">
+              <span>编辑</span>
+              <span class="sr-only">Edit</span>
+            </a>
             <form method="post" action="/schedule/{{ row.plan.id }}/cancel" style="display: inline-block; margin: 0;">
-              <button type="submit" class="cancel">Cancel</button>
+              <button type="submit" class="cancel">
+                <span>撤销</span>
+                <span class="sr-only">Cancel</span>
+              </button>
             </form>
             {% endif %}
           </td>
@@ -33,10 +52,10 @@
     </table>
   </div>
   {% else %}
-  <p class="empty">No planned use for this view yet.</p>
+  <p class="empty">当前筛选条件下暂无算力预约。<span class="sr-only">No planned use for this view yet.</span></p>
   {% endif %}
 </article>
 {% endfor %}
 {% if not groups %}
-<p class="empty">No servers are registered yet.</p>
+<p class="empty">暂无注册的计算服务器节点。<span class="sr-only">No servers are registered yet.</span></p>
 {% endif %}

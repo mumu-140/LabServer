@@ -1,9 +1,60 @@
 /* ==========================================================================
-   LABSERVER CYBER TELEMETRY HUD — MULTI-THEME DESIGN SYSTEM
-   Supported Themes: Cyberpunk Cyan | Matrix Terminal | Synthwave Neon | Quantum Stealth
+   LABSERVER DUAL-THEME SYSTEM
+   1. 水墨古风 (Ink Wash / Shanshui Aesthetic) — 默认主色彩
+   2. 赛博科技 (Cyberpunk HUD) — 保留科技风
    ========================================================================== */
 
 :root,
+[data-theme="ink"] {
+  color-scheme: dark;
+  --theme-name: "ink";
+  --bg-deep: #0c0f13;
+  --bg-surface: #12161b;
+  --bg-card: #181d24;
+  --bg-card-hover: #1f252f;
+  --bg-subtle: #161b22;
+  --bg-glass: rgba(18, 22, 27, 0.88);
+
+  --line: rgba(195, 180, 150, 0.14);
+  --line-subtle: rgba(195, 180, 150, 0.07);
+  --line-strong: rgba(195, 180, 150, 0.24);
+  --line-cyber: rgba(203, 178, 121, 0.28);
+  --line-cyber-bright: rgba(203, 178, 121, 0.65);
+
+  --primary: #cbb279; /* 泥金 / 宣纸微光 */
+  --primary-subtle: rgba(203, 178, 121, 0.12);
+  --primary-border: rgba(203, 178, 121, 0.35);
+  --primary-hover: #e2cca0;
+  --glow-color: rgba(203, 178, 121, 0.45);
+  --glow-subtle: rgba(203, 178, 121, 0.16);
+  --secondary: #4a6b82; /* 远山黛蓝 */
+
+  --cyber-cyan: #cbb279;
+  --cyber-emerald: #389e70; /* 竹青 / 松石绿 */
+  --cyber-amber: #d4882a;  /* 雄黄 / 苍琥珀 */
+  --cyber-rose: #c73e3a;   /* 朱砂印泥红 */
+
+  --success-bg: rgba(56, 158, 112, 0.14);
+  --success-ink: #48bb78;
+  --success-border: rgba(56, 158, 112, 0.42);
+
+  --warning-bg: rgba(212, 136, 42, 0.14);
+  --warning-ink: #f6ad55;
+  --warning-border: rgba(212, 136, 42, 0.42);
+  --warn-bg: rgba(212, 136, 42, 0.14);
+  --warn-ink: #f6ad55;
+
+  --danger-bg: rgba(199, 62, 58, 0.15);
+  --danger-ink: #f87171;
+  --danger-border: rgba(199, 62, 58, 0.45);
+
+  --grid-color: rgba(195, 180, 150, 0.02);
+  --ambient-spotlight: rgba(45, 58, 70, 0.32);
+  --btn-gradient: linear-gradient(135deg, #a83836 0%, #c73e3a 100%);
+  --btn-gradient-hover: linear-gradient(135deg, #bd4240 0%, #dc4642 100%);
+}
+
+/* Preserved Theme: 赛博科技 (Cyberpunk HUD) */
 [data-theme="cyber"] {
   color-scheme: dark;
   --theme-name: "cyber";
@@ -53,165 +104,27 @@
   --btn-gradient-hover: linear-gradient(135deg, #00e5ff 0%, #0088ff 100%);
 }
 
-/* Theme 2: Matrix Terminal */
-[data-theme="matrix"] {
-  color-scheme: dark;
-  --theme-name: "matrix";
-  --bg-deep: #030805;
-  --bg-surface: #061209;
-  --bg-card: #08180c;
-  --bg-card-hover: #0d2212;
-  --bg-subtle: #091a0e;
-  --bg-glass: rgba(3, 9, 5, 0.88);
-
-  --line: rgba(0, 255, 102, 0.12);
-  --line-subtle: rgba(0, 255, 102, 0.06);
-  --line-strong: rgba(0, 255, 102, 0.25);
-  --line-cyber: rgba(0, 255, 102, 0.35);
-  --line-cyber-bright: rgba(0, 255, 102, 0.7);
-
-  --primary: #00ff66;
-  --primary-subtle: rgba(0, 255, 102, 0.12);
-  --primary-border: rgba(0, 255, 102, 0.4);
-  --primary-hover: #34d399;
-  --glow-color: rgba(0, 255, 102, 0.7);
-  --glow-subtle: rgba(0, 255, 102, 0.25);
-  --secondary: #059669;
-
-  --cyber-cyan: #00ff66;
-  --cyber-emerald: #00ff88;
-  --cyber-amber: #eab308;
-  --cyber-rose: #ef4444;
-
-  --success-bg: rgba(0, 255, 102, 0.14);
-  --success-ink: #00ff66;
-  --success-border: rgba(0, 255, 102, 0.45);
-
-  --warning-bg: rgba(234, 179, 8, 0.14);
-  --warning-ink: #facc15;
-  --warning-border: rgba(234, 179, 8, 0.4);
-  --warn-bg: rgba(234, 179, 8, 0.14);
-  --warn-ink: #facc15;
-
-  --danger-bg: rgba(239, 68, 68, 0.16);
-  --danger-ink: #f87171;
-  --danger-border: rgba(239, 68, 68, 0.45);
-
-  --grid-color: rgba(0, 255, 102, 0.035);
-  --ambient-spotlight: rgba(0, 255, 102, 0.15);
-  --btn-gradient: linear-gradient(135deg, #00ff66 0%, #059669 100%);
-  --btn-gradient-hover: linear-gradient(135deg, #22c55e 0%, #10b981 100%);
-}
-
-/* Theme 3: Synthwave Neon Sunset */
-[data-theme="synthwave"] {
-  color-scheme: dark;
-  --theme-name: "synthwave";
-  --bg-deep: #0a0414;
-  --bg-surface: #100720;
-  --bg-card: #160a2c;
-  --bg-card-hover: #1e0e3c;
-  --bg-subtle: #190c33;
-  --bg-glass: rgba(11, 4, 20, 0.88);
-
-  --line: rgba(255, 0, 128, 0.12);
-  --line-subtle: rgba(255, 0, 128, 0.06);
-  --line-strong: rgba(255, 0, 128, 0.26);
-  --line-cyber: rgba(255, 0, 128, 0.35);
-  --line-cyber-bright: rgba(255, 0, 128, 0.75);
-
-  --primary: #ff007f;
-  --primary-subtle: rgba(255, 0, 127, 0.14);
-  --primary-border: rgba(255, 0, 127, 0.4);
-  --primary-hover: #f43f5e;
-  --glow-color: rgba(255, 0, 127, 0.7);
-  --glow-subtle: rgba(255, 0, 127, 0.25);
-  --secondary: #8b5cf6;
-
-  --cyber-cyan: #ff007f;
-  --cyber-emerald: #00f0ff;
-  --cyber-amber: #f59e0b;
-  --cyber-rose: #ff0055;
-
-  --success-bg: rgba(0, 240, 255, 0.13);
-  --success-ink: #38bdf8;
-  --success-border: rgba(0, 240, 255, 0.42);
-
-  --warning-bg: rgba(245, 158, 11, 0.14);
-  --warning-ink: #fbbf24;
-  --warning-border: rgba(245, 158, 11, 0.4);
-  --warn-bg: rgba(245, 158, 11, 0.14);
-  --warn-ink: #fbbf24;
-
-  --danger-bg: rgba(255, 0, 85, 0.18);
-  --danger-ink: #fda4af;
-  --danger-border: rgba(255, 0, 85, 0.45);
-
-  --grid-color: rgba(255, 0, 128, 0.035);
-  --ambient-spotlight: rgba(255, 0, 128, 0.15);
-  --btn-gradient: linear-gradient(135deg, #ff007f 0%, #7928ca 100%);
-  --btn-gradient-hover: linear-gradient(135deg, #ff2a9d 0%, #9035ea 100%);
-}
-
-/* Theme 4: Quantum Stealth Titanium */
-[data-theme="quantum"] {
-  color-scheme: dark;
-  --theme-name: "quantum";
-  --bg-deep: #07090d;
-  --bg-surface: #0c0f17;
-  --bg-card: #10141f;
-  --bg-card-hover: #151b2a;
-  --bg-subtle: #121724;
-  --bg-glass: rgba(7, 9, 13, 0.9);
-
-  --line: rgba(255, 255, 255, 0.1);
-  --line-subtle: rgba(255, 255, 255, 0.05);
-  --line-strong: rgba(255, 255, 255, 0.2);
-  --line-cyber: rgba(56, 189, 248, 0.3);
-  --line-cyber-bright: rgba(56, 189, 248, 0.65);
-
-  --primary: #38bdf8;
-  --primary-subtle: rgba(56, 189, 248, 0.12);
-  --primary-border: rgba(56, 189, 248, 0.35);
-  --primary-hover: #7dd3fc;
-  --glow-color: rgba(56, 189, 248, 0.55);
-  --glow-subtle: rgba(56, 189, 248, 0.2);
-  --secondary: #64748b;
-
-  --cyber-cyan: #38bdf8;
-  --cyber-emerald: #34d399;
-  --cyber-amber: #fbbf24;
-  --cyber-rose: #f87171;
-
-  --success-bg: rgba(52, 211, 153, 0.12);
-  --success-ink: #34d399;
-  --success-border: rgba(52, 211, 153, 0.38);
-
-  --warning-bg: rgba(251, 191, 36, 0.12);
-  --warning-ink: #fbbf24;
-  --warning-border: rgba(251, 191, 36, 0.38);
-  --warn-bg: rgba(251, 191, 36, 0.12);
-  --warn-ink: #fbbf24;
-
-  --danger-bg: rgba(248, 113, 113, 0.14);
-  --danger-ink: #f87171;
-  --danger-border: rgba(248, 113, 113, 0.4);
-
-  --grid-color: rgba(255, 255, 255, 0.02);
-  --ambient-spotlight: rgba(56, 189, 248, 0.1);
-  --btn-gradient: linear-gradient(135deg, #38bdf8 0%, #1e40af 100%);
-  --btn-gradient-hover: linear-gradient(135deg, #60a5fa 0%, #2563eb 100%);
-}
-
-/* Common Global Tokens */
+/* Common Global Typography & Elevation Tokens */
 :root {
-  --ink: #f1f5f9;
-  --ink-secondary: #94a3b8;
-  --ink-muted: #64748b;
-  --ink-faint: #475569;
+  --ink: #f5f2eb;
+  --ink-secondary: #9da7b3;
+  --ink-muted: #67717d;
+  --ink-faint: #47515d;
 
-  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Fira Code", Menlo, Monaco, Consolas, monospace;
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", "STSong", serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", "Source Han Sans SC", sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", "Fira Code", Menlo, Monaco, Consolas, monospace;
+
+  --radius-sm: 4px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  --surface: var(--bg-card);
+  --surface-card: var(--bg-card);
+  --surface-subtle: var(--bg-subtle);
+  --surface-hover: var(--bg-card-hover);
+}
 
   --radius-sm: 4px;
   --radius: 8px;
@@ -247,17 +160,24 @@ body {
   transition: background-color 0.3s ease, background-image 0.3s ease, color 0.3s ease;
 }
 
-/* Cyber Ambient Glow background */
+/* Ambient Misty Glow Background */
 .cyber-ambient-glow {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  height: 480px;
-  background: radial-gradient(circle at 50% 0%, var(--ambient-spotlight) 0%, transparent 70%);
+  height: 520px;
+  background: radial-gradient(ellipse 65% 50% at 50% 0%, var(--ambient-spotlight) 0%, transparent 70%);
   pointer-events: none;
   z-index: 0;
   transition: background 0.3s ease;
+}
+
+[data-theme="ink"] .cyber-ambient-glow {
+  background:
+    radial-gradient(circle at 18% 12%, rgba(45, 58, 70, 0.4) 0%, transparent 60%),
+    radial-gradient(circle at 82% 18%, rgba(199, 62, 58, 0.08) 0%, transparent 55%),
+    radial-gradient(circle at 50% 80%, rgba(203, 178, 121, 0.08) 0%, transparent 65%);
 }
 
 /* Header & Switcher Layout */
@@ -304,35 +224,54 @@ body {
   transform: translateY(-1px);
 }
 
-.brand-logo-icon {
+.brand-seal-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 32px;
   height: 32px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-  color: #060912;
-  box-shadow: 0 0 16px var(--glow-color), inset 0 1px 1px rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  animation: logo-glow 3s infinite ease-in-out;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #a83836 0%, #c73e3a 100%);
+  color: #ffffff;
+  font-family: var(--font-serif);
+  font-weight: 900;
+  font-size: 17px;
+  box-shadow: 0 0 14px rgba(199, 62, 58, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  margin-right: 2px;
 }
 
-@keyframes logo-glow {
-  0%, 100% {
-    box-shadow: 0 0 12px var(--glow-color);
-  }
-  50% {
-    box-shadow: 0 0 22px var(--glow-color), 0 0 8px rgba(255, 255, 255, 0.8);
-  }
+[data-theme="cyber"] .brand-seal-icon {
+  background: linear-gradient(135deg, #00c6ff 0%, #0072ff 100%);
+  box-shadow: 0 0 16px var(--glow-color);
+}
+
+.brand-text-group {
+  display: flex;
+  flex-direction: column;
 }
 
 .brand-name {
   background: linear-gradient(90deg, #ffffff 40%, var(--primary) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  font-family: var(--font-sans);
+  font-family: var(--font-serif);
+  font-weight: 800;
+  letter-spacing: 0.05em;
   text-shadow: 0 0 20px var(--glow-subtle);
+}
+
+[data-theme="cyber"] .brand-name {
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
+}
+
+.brand-sub {
+  font-size: 9.5px;
+  font-family: var(--font-mono);
+  color: var(--ink-muted);
+  letter-spacing: 0.08em;
+  margin-top: -3px;
 }
 
 .telemetry-tag {
@@ -342,11 +281,20 @@ body {
   color: var(--primary);
   background: var(--primary-subtle);
   border: 1px solid var(--primary-border);
-  padding: 1px 5px;
+  padding: 1px 6px;
   border-radius: 4px;
   letter-spacing: 0.08em;
   margin-left: 2px;
   box-shadow: 0 0 8px var(--glow-subtle);
+}
+
+.ink-seal-tag {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  border: 1px solid var(--primary-border);
+  background: var(--primary-subtle);
+  color: var(--primary);
+  border-radius: 4px;
 }
 
 /* Navigation Tabs */
@@ -448,12 +396,27 @@ body {
   height: 7px;
   border-radius: 50%;
   display: inline-block;
+.theme-dot-ink {
+  background: radial-gradient(circle, #cbb279 35%, #181d24 95%);
+  box-shadow: 0 0 6px rgba(203, 178, 121, 0.6);
+  border: 1px solid rgba(203, 178, 121, 0.8);
 }
-
 .theme-dot-cyber { background: #00f0ff; box-shadow: 0 0 6px #00f0ff; }
 .theme-dot-matrix { background: #00ff66; box-shadow: 0 0 6px #00ff66; }
 .theme-dot-synthwave { background: #ff007f; box-shadow: 0 0 6px #ff007f; }
 .theme-dot-quantum { background: #38bdf8; box-shadow: 0 0 6px #38bdf8; }
+
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
 
 /* User Nav & Terminal Controls */
 .user-nav {
@@ -523,6 +486,13 @@ body {
   text-shadow: 0 0 8px var(--glow-subtle);
 }
 
+[data-theme="ink"] .hud-breadcrumb {
+  font-family: var(--font-serif);
+  letter-spacing: 0.08em;
+  font-size: 12px;
+  text-shadow: none;
+}
+
 h1 {
   margin: 0 0 6px;
   font-size: 28px;
@@ -530,6 +500,14 @@ h1 {
   letter-spacing: -0.03em;
   color: #ffffff;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="ink"] h1 {
+  font-family: var(--font-serif);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
 }
 
 h2 {
@@ -540,11 +518,127 @@ h2 {
   color: #ffffff;
 }
 
+[data-theme="ink"] h2,
+[data-theme="ink"] h3 {
+  font-family: var(--font-serif);
+  font-weight: 750;
+  letter-spacing: 0.03em;
+  color: var(--ink);
+}
+
 .lede {
   color: var(--ink-secondary);
   font-size: 14px;
   margin-top: 0;
   margin-bottom: 22px;
+  line-height: 1.6;
+}
+
+/* Nyerver Server Monitoring Dashboard Components */
+.cluster-summary-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.kpi-card {
+  position: relative;
+  background: linear-gradient(160deg, var(--bg-card) 0%, var(--bg-surface) 100%);
+  border: 1px solid var(--line-cyber);
+  border-radius: var(--radius-xl);
+  padding: 18px 22px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+  transition: all 0.22s ease;
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--line-cyber-bright);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55), 0 0 16px var(--glow-subtle);
+}
+
+.kpi-label {
+  font-family: var(--font-serif);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-secondary);
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+[data-theme="cyber"] .kpi-label {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+}
+
+.kpi-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.kpi-num {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-unit {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.kpi-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 11.5px;
+}
+
+.kpi-subtext {
+  color: var(--ink-muted);
+}
+
+.seal-stamp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 7px;
+  font-family: var(--font-serif);
+  font-size: 11px;
+  font-weight: 700;
+  color: #f87171;
+  border: 1px solid rgba(199, 62, 58, 0.5);
+  background: rgba(199, 62, 58, 0.12);
+  border-radius: 3px;
+  letter-spacing: 0.05em;
+  box-shadow: inset 0 0 4px rgba(199, 62, 58, 0.2);
+}
+
+.role-tag-seal {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  border: 1px solid var(--primary-border);
+  background: var(--primary-subtle);
+  color: var(--primary);
+  border-radius: 4px;
+}
+
+.badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  display: inline-block;
+  box-shadow: 0 0 6px currentColor;
 }
 
 /* Base Card Style & HUD Animations */
@@ -584,6 +678,23 @@ h2 {
   border-color: var(--line-cyber-bright);
   box-shadow: 0 14px 44px -4px rgba(0, 0, 0, 0.85), 0 0 24px var(--glow-subtle);
   transform: translateY(-3px);
+}
+
+[data-theme="ink"] .card {
+  background: linear-gradient(160deg, rgba(24, 29, 36, 0.92) 0%, rgba(18, 22, 27, 0.96) 100%);
+  border: 1px solid rgba(195, 180, 150, 0.16);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="ink"] .card:hover {
+  border-color: rgba(203, 178, 121, 0.45);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.65), 0 0 20px rgba(203, 178, 121, 0.12);
+  transform: translateY(-2px);
+}
+
+[data-theme="ink"] .card::before {
+  background: linear-gradient(90deg, transparent 0%, rgba(203, 178, 121, 0.4) 50%, transparent 100%);
+  opacity: 0.5;
 }
 
 /* Card Staggered Entrance Animation */
@@ -886,6 +997,21 @@ h2 {
 .progress-fill.fill-danger {
   background: linear-gradient(90deg, #ff0055 0%, #ff3366 100%);
   box-shadow: 0 0 14px rgba(255, 51, 102, 0.8);
+}
+
+[data-theme="ink"] .progress-fill {
+  background: linear-gradient(90deg, #2b7a58 0%, #389e70 100%);
+  box-shadow: 0 0 8px rgba(56, 158, 112, 0.35);
+}
+
+[data-theme="ink"] .progress-fill.fill-warn {
+  background: linear-gradient(90deg, #b87322 0%, #d4882a 100%);
+  box-shadow: 0 0 8px rgba(212, 136, 42, 0.35);
+}
+
+[data-theme="ink"] .progress-fill.fill-danger {
+  background: linear-gradient(90deg, #a83836 0%, #c73e3a 100%);
+  box-shadow: 0 0 8px rgba(199, 62, 58, 0.4);
 }
 
 .gpu-badge-row {

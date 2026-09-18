@@ -1,40 +1,43 @@
 <form class="planned-use-form" method="post" action="/schedule">
-  <label>Server
+  <label>目标服务器
     <select name="server_key" required>
       {% for item in servers %}
-      <option value="{{ item.key }}" {% if item.key == form.server_key %}selected{% endif %}>{{ item.key }}</option>
+      <option value="{{ item.key }}" {% if item.key == form.server_key %}selected{% endif %}>{{ item.key }} ({{ item.display_name }})</option>
       {% endfor %}
     </select>
   </label>
-  <label>Title
-    <input name="title" required maxlength="200" placeholder="What will you run?" value="{{ form.title or "" }}" />
+  <label>任务标题
+    <input name="title" required maxlength="200" placeholder="例如：大语言模型微调 / RNA-seq 比对" value="{{ form.title or "" }}" />
   </label>
-  <label>Project
-    <input name="project" maxlength="200" placeholder="optional" value="{{ form.project or "" }}" />
+  <label>所属课题/项目
+    <input name="project" maxlength="200" placeholder="可选填，用于团队协作追溯" value="{{ form.project or "" }}" />
   </label>
-  <label>Date
+  <label>预约日期
     <input type="date" name="date" value="{{ form.date or date }}" />
   </label>
-  <label>Starts at
+  <label>开始时间
     <input type="datetime-local" name="start_at" required value="{{ form.start_at or "" }}" />
   </label>
-  <label>Ends at
+  <label>结束时间
     <input type="datetime-local" name="end_at" required value="{{ form.end_at or "" }}" />
   </label>
-  <label>CPU cores
-    <input type="number" name="cpu_cores" min="1" placeholder="optional" value="{{ form.cpu_cores or "" }}" />
+  <label>CPU 核心数
+    <input type="number" name="cpu_cores" min="1" placeholder="选填，需保留的核心数量" value="{{ form.cpu_cores or "" }}" />
   </label>
-  <label>Memory (GB)
-    <input type="number" name="memory_gb" min="0" step="0.5" placeholder="optional" value="{{ form.memory_gb or "" }}" />
+  <label>内存容量 (GB)
+    <input type="number" name="memory_gb" min="0" step="0.5" placeholder="选填，预计占用内存" value="{{ form.memory_gb or "" }}" />
   </label>
-  <label>GPU count
-    <input type="number" name="gpu_count" min="0" placeholder="optional" value="{{ form.gpu_count or "" }}" />
+  <label>GPU 显卡数
+    <input type="number" name="gpu_count" min="0" placeholder="选填，申请的卡数总量" value="{{ form.gpu_count or "" }}" />
   </label>
-  <label>GPU IDs
-    <input name="gpu_ids" placeholder="e.g. 0,1 (optional)" value="{{ form.gpu_ids or "" }}" />
+  <label>指定 GPU 卡号
+    <input name="gpu_ids" placeholder="如 0 或 0,1 (选填)" value="{{ form.gpu_ids or "" }}" />
   </label>
-  <label style="grid-column: 1 / -1;">Note
-    <input name="note" maxlength="2000" placeholder="optional" value="{{ form.note or "" }}" />
+  <label style="grid-column: 1 / -1;">备注说明
+    <input name="note" maxlength="2000" placeholder="选填，关于实验或计算的额外补充" value="{{ form.note or "" }}" />
   </label>
-  <button type="submit">Publish planned use</button>
+  <button type="submit">
+    <span>发布算力预约意向</span>
+    <span class="sr-only">Publish planned use</span>
+  </button>
 </form>

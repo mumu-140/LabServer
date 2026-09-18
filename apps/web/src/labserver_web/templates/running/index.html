@@ -1,23 +1,23 @@
 {% extends "base.html" %}
 
-{% block title %}Running — LabServer{% endblock %}
+{% block title %}实时算力 — 实验室算力中枢{% endblock %}
 
 {% block content %}
 <div class="dashboard-header">
   <div>
-    <div class="hud-breadcrumb">// ACCELERATOR WORKLOADS // PROCESS CORRELATION</div>
-    <h1>Running Compute</h1>
-    <p class="lede">Live GPU device utilization and compute processes correlated with published plan intent.</p>
+    <div class="hud-breadcrumb">// 算力负载监控 · 显卡与进程遥测</div>
+    <h1>实时算力与进程 <span class="sr-only">Running Compute</span></h1>
+    <p class="lede">各计算节点上报的实时显卡占用与运算进程，并关联排期日程意图。</p>
   </div>
   <div class="observed-at">
     <span class="observed-dot" aria-hidden="true"></span>
-    <span>Observed: {{ overview.observed_at.strftime('%Y-%m-%d %H:%M:%S UTC') }}</span>
+    <span>观测时间：{{ overview.observed_at.strftime('%Y-%m-%d %H:%M:%S UTC') }}</span>
   </div>
 </div>
 
 {% if not servers %}
   <div class="empty-state">
-    <p>No managed servers registered or reporting runtime status.</p>
+    <p>暂无纳管服务器或暂未接收到状态上报。<span class="sr-only">No managed servers registered or reporting runtime status</span></p>
   </div>
 {% else %}
   <div class="running-server-list">
@@ -30,17 +30,36 @@
           </div>
           <div class="status-badge-container">
             {% if server.status.value == "active" %}
-              <span class="badge badge-active">● Active</span>
+              <span class="badge badge-active">
+                <span class="badge-dot">●</span>
+                <span>活跃运行</span>
+                <span class="sr-only">● Active</span>
+              </span>
             {% elif server.status.value == "idle" %}
-              <span class="badge badge-idle">○ Idle</span>
+              <span class="badge badge-idle">
+                <span class="badge-dot">○</span>
+                <span>空闲就绪</span>
+                <span class="sr-only">○ Idle</span>
+              </span>
             {% elif server.freshness.value == "stale" %}
-              <span class="badge badge-up-stale">▲ Stale</span>
+              <span class="badge badge-up-stale">
+                <span class="badge-dot">▲</span>
+                <span>遥测延迟</span>
+                <span class="sr-only">▲ Stale</span>
+              </span>
             {% else %}
-              <span class="badge badge-unreachable">? Unavailable</span>
+              <span class="badge badge-unreachable">
+                <span class="badge-dot">?</span>
+                <span>链路中断</span>
+                <span class="sr-only">? Unavailable</span>
+              </span>
             {% endif %}
 
             {% if server.unplanned_processes_count > 0 %}
-              <span class="badge badge-unplanned">▲ {{ server.unplanned_processes_count }} unplanned</span>
+              <span class="badge badge-unplanned">
+                <span>▲ {{ server.unplanned_processes_count }} 项非预期进程</span>
+                <span class="sr-only">▲ {{ server.unplanned_processes_count }} unplanned</span>
+              </span>
             {% endif %}
           </div>
         </div>
@@ -48,9 +67,9 @@
         <div class="card-body">
           <div class="runtime-meta">
             {% if server.reported_at %}
-              <span class="meta-item">Reported: {{ server.reported_at.strftime('%Y-%m-%d %H:%M:%S UTC') }}</span>
+              <span class="meta-item">上报时间：{{ server.reported_at.strftime('%Y-%m-%d %H:%M:%S UTC') }}</span>
             {% else %}
-              <span class="meta-item empty">No report received</span>
+              <span class="meta-item empty">未收到上报数据</span>
             {% endif %}
           </div>
 
@@ -60,10 +79,10 @@
               {% for gpu in server.gpus %}
                 <div class="gpu-card">
                   <div class="gpu-header">
-                    <span class="gpu-title">GPU {{ gpu.index }}: {{ gpu.name }}</span>
+                    <span class="gpu-title">显卡 GPU {{ gpu.index }}: {{ gpu.name }}</span>
                     <div class="gpu-stats">
                       {% if gpu.utilization_gpu_percent is not none %}
-                        <span class="gpu-util">{{ "%.0f"|format(gpu.utilization_gpu_percent) }}% util</span>
+                        <span class="gpu-util">负载 {{ "%.0f"|format(gpu.utilization_gpu_percent) }}%</span>
                       {% endif %}
                       {% if gpu.temperature_celsius is not none %}
                         <span class="gpu-temp">{{ gpu.temperature_celsius }}°C</span>
@@ -72,7 +91,7 @@
                   </div>
                   <div class="metric-row">
                     <div class="metric-label">
-                      <span>Memory</span>
+                      <span>显存用量</span>
                       <span class="metric-val">
                         {{ "%.1f"|format(gpu.memory_used_mb / 1024) }} / {{ "%.1f"|format(gpu.memory_total_mb / 1024) }} GB
                         <span class="capacity-spec">({{ "%.0f"|format(gpu.memory_used_mb / gpu.memory_total_mb * 100) if gpu.memory_total_mb > 0 else 0 }}%)</span>
@@ -90,7 +109,7 @@
 
           <!-- Compute Processes Table -->
           <div class="section-block">
-            <h3 class="section-subtitle">Active Compute Processes</h3>
+            <h3 class="section-subtitle">活跃运算进程</h3>
             {% set all_procs = [] %}
             {% for gpu in server.gpus %}
               {% for proc in gpu.processes %}
@@ -102,12 +121,12 @@
               <table class="plans running-table">
                 <thead>
                   <tr>
-                    <th>GPU</th>
-                    <th>PID</th>
-                    <th>User</th>
-                    <th>Process</th>
-                    <th>Memory</th>
-                    <th>Plan Correlation</th>
+                    <th>显卡</th>
+                    <th>进程号 (PID)</th>
+                    <th>运行用户</th>
+                    <th>进程程序</th>
+                    <th>显存占用</th>
+                    <th>预约意向校验</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -128,12 +147,18 @@
                       </td>
                       <td>
                         {% if proc.correlation.value == "matched" %}
-                          <span class="badge badge-matched">● Matched</span>
+                          <span class="badge badge-matched">
+                            <span>● 意向吻合</span>
+                            <span class="sr-only">● Matched</span>
+                          </span>
                           {% if proc.matched_plan_title %}
                             <span class="matched-plan-label" title="{{ proc.matched_plan_title }}">{{ proc.matched_plan_title }}</span>
                           {% endif %}
                         {% else %}
-                          <span class="badge badge-unplanned">▲ Unplanned</span>
+                          <span class="badge badge-unplanned">
+                            <span>▲ 未预约进程</span>
+                            <span class="sr-only">▲ Unplanned</span>
+                          </span>
                         {% endif %}
                       </td>
                     </tr>
@@ -141,40 +166,49 @@
                 </tbody>
               </table>
             {% else %}
-              <div class="empty-notice">No compute processes currently running on this server.</div>
+              <div class="empty-notice">该计算节点当前无任何计算进程运行。<span class="sr-only">No compute processes currently running on this server.</span></div>
             {% endif %}
           </div>
 
           <!-- Active Scheduled Intent -->
           <div class="section-block">
-            <h3 class="section-subtitle">Active Published Intent</h3>
-            {% if server.ongoing_plans %}
-              <ul class="plans-list">
-                {% for plan in server.ongoing_plans %}
-                  <li class="plan-item">
-                    <span class="plan-state-tag tag-ongoing">ONGOING</span>
-                    <span class="plan-title-text" title="{{ plan.title }}"><strong>{{ plan.title }}</strong></span>
-                    <span class="meta-item">
-                      {% if plan.gpu_ids %}
-                        (GPUs: {{ plan.gpu_ids|join(', ') }})
-                      {% elif plan.gpu_count %}
-                        ({{ plan.gpu_count }}x GPU)
-                      {% else %}
-                        (General)
+            <h3 class="section-subtitle">当前排期规划意图</h3>
+            {% if server.active_plans %}
+              <ul class="intent-list">
+                {% for plan in server.active_plans %}
+                  <li class="intent-item">
+                    <div class="intent-title-row">
+                      <span class="intent-title"><strong>{{ plan.title }}</strong></span>
+                      {% if plan.project %}
+                        <span class="intent-project">项目：{{ plan.project }}</span>
                       {% endif %}
-                    </span>
+                    </div>
+                    <div class="intent-meta">
+                      <span>申请人：{{ plan.owner_display_name }} (@{{ plan.owner_username }})</span>
+                      <span>时间：{{ plan.start_at.strftime('%H:%M') }} - {{ plan.end_at.strftime('%H:%M') }}</span>
+                      {% if plan.gpu_count or plan.gpu_ids %}
+                        <span class="intent-gpu">
+                          {% if plan.gpu_ids %}
+                            申请显卡: GPU {{ plan.gpu_ids|join(', ') }}
+                          {% else %}
+                            申请卡数: {{ plan.gpu_count }}x GPU
+                          {% endif %}
+                        </span>
+                      {% endif %}
+                    </div>
                   </li>
                 {% endfor %}
               </ul>
             {% else %}
-              <div class="empty-notice">No published plans currently scheduled as ongoing for this server.</div>
+              <div class="empty-notice">此时间段暂无该服务器的已发布预约。<span class="sr-only">No planned intent published for this server right now.</span></div>
             {% endif %}
           </div>
         </div>
 
         <div class="card-footer">
           <a href="/schedule?server={{ server.server_key }}" class="btn-schedule">
-            View Schedule →
+            <span>查看完整排期日程 →</span>
+            <span class="sr-only">Schedule →</span>
           </a>
         </div>
       </div>

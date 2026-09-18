@@ -1,22 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}Log in - LabServer{% endblock %}
+{% block title %}登录系统 — 实验室算力中枢{% endblock %}
 
 {% block content %}
 <div class="auth-page-wrapper">
   <section class="card auth-card">
     <div class="auth-header">
-      <div class="brand-logo-icon" aria-hidden="true">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
-          <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
-          <line x1="6" y1="6" x2="6.01" y2="6"></line>
-          <line x1="6" y1="18" x2="6.01" y2="18"></line>
-        </svg>
-      </div>
-      <div class="auth-terminal-tag">// RESTRICTED ACCESS // LAB INFRASTRUCTURE</div>
-      <h2>Log in to LabServer</h2>
-      <p>Authorized compute coordination & telemetry console</p>
+      <div class="brand-seal-icon auth-seal" aria-hidden="true">算</div>
+      <div class="auth-terminal-tag">// 权限验证 · 实验室算力中枢</div>
+      <h2>登录系统 · 算力中枢</h2>
+      <p>授权科研人员登录，以开展节点遥测与多机算力排期</p>
     </div>
 
     {% if error %}
@@ -27,15 +20,18 @@
 
     <form method="post" action="/login" class="form">
       <div class="form-group">
-        <label for="username">Username</label>
-        <input type="text" id="username" name="username" value="{{ username or '' }}" required autofocus placeholder="Enter your username" autocomplete="username" />
+        <label for="username">登录用户名</label>
+        <input type="text" id="username" name="username" value="{{ username or '' }}" required autofocus placeholder="请输入您的用户名" autocomplete="username" />
       </div>
       <div class="form-group">
-        <label for="password">Password</label>
+        <label for="password">登录密码</label>
         <input type="password" id="password" name="password" required placeholder="••••••••" autocomplete="current-password" />
       </div>
       <div class="form-actions">
-        <button type="submit" class="btn btn-primary">Log in</button>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">
+          <span>登 录 系 统</span>
+          <span class="sr-only">Log in</span>
+        </button>
       </div>
     </form>
   </section>

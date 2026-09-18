@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Edit planned use — LabServer{% endblock %}
+{% block title %}编辑预约 — 实验室算力中枢{% endblock %}
 {% block content %}
 <div class="dashboard-header">
   <div>
-    <div class="hud-breadcrumb">// MODIFICATION // ALLOCATION RECORD</div>
-    <h1>Edit planned use</h1>
-    <p class="lede">Update "{{ plan.title }}". Times are interpreted in {{ timezone_name }}.</p>
+    <div class="hud-breadcrumb">// 预约调整 · 计算排期变更</div>
+    <h1>编辑算力预约 <span class="sr-only">Edit planned use</span></h1>
+    <p class="lede">修改预约项「{{ plan.title }}」。时间基准依从 {{ timezone_name }}。</p>
   </div>
 </div>
 
@@ -15,36 +15,42 @@
 
 <div class="card" style="padding: 28px; max-width: 840px; margin-top: 16px;">
   <form class="planned-use-form" method="post" action="/schedule/{{ plan.id }}/edit">
-    <label>Title
+    <label>任务标题
       <input name="title" required maxlength="200" value="{{ title_value }}" />
     </label>
-    <label>Project
+    <label>所属课题/项目
       <input name="project" maxlength="200" value="{{ project_value }}" />
     </label>
-    <label>Starts at
+    <label>开始时间
       <input type="datetime-local" name="start_at" required value="{{ start_value }}" />
     </label>
-    <label>Ends at
+    <label>结束时间
       <input type="datetime-local" name="end_at" required value="{{ end_value }}" />
     </label>
-    <label>CPU cores
+    <label>CPU 核心数
       <input type="number" name="cpu_cores" min="1" value="{{ cpu_value }}" />
     </label>
-    <label>Memory (GB)
+    <label>内存容量 (GB)
       <input type="number" name="memory_gb" min="0" step="0.5" value="{{ memory_value }}" />
     </label>
-    <label>GPU count
+    <label>GPU 显卡数
       <input type="number" name="gpu_count" min="0" value="{{ gpu_count_value }}" />
     </label>
-    <label>GPU IDs
+    <label>指定 GPU 卡号
       <input name="gpu_ids" value="{{ gpu_ids_value }}" />
     </label>
-    <label style="grid-column: 1 / -1;">Note
+    <label style="grid-column: 1 / -1;">备注说明
       <input name="note" maxlength="2000" value="{{ note_value }}" />
     </label>
     <div style="grid-column: 1 / -1; display: flex; gap: 12px; align-items: center; margin-top: 10px;">
-      <button type="submit">Save changes</button>
-      <a class="clear" href="/schedule">Back</a>
+      <button type="submit">
+        <span>保存修改</span>
+        <span class="sr-only">Save changes</span>
+      </button>
+      <a class="clear" href="/schedule">
+        <span>返回日程</span>
+        <span class="sr-only">Back</span>
+      </a>
     </div>
   </form>
 </div>
