@@ -16,10 +16,9 @@ from labserver_contracts.runtime import (
 
 from labserver_core.domain.entities import ManagedServer, PlanEntry, plan_display_state
 from labserver_core.domain.errors import NotFound
-from labserver_core.persistence.unit_of_work import SqlAlchemyUnitOfWork
 
 from .actors import CurrentActor, require_active_actor
-from .ports import UnitOfWorkFactory
+from .ports import UnitOfWork, UnitOfWorkFactory
 from .runtime_store import RuntimeStore
 
 
@@ -95,7 +94,7 @@ class RuntimeService:
         self,
         server: ManagedServer,
         users_map: dict[UUID, str],
-        uow: SqlAlchemyUnitOfWork | object,
+        uow: UnitOfWork,
     ) -> HostRuntimeRead:
         now = self._clock()
         report = self._runtime_store.get_report(server.key)
@@ -103,8 +102,7 @@ class RuntimeService:
             server.key, now, self._freshness_threshold_seconds
         )
 
-        plans_repo = getattr(uow, "plans")
-        plans = plans_repo.list(
+        plans = uow.plans.list(
             server_id=server.id,
             start=now,
             end=now,
