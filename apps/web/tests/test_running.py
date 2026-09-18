@@ -129,7 +129,9 @@ def test_authenticated_member_sees_running_overview(
 def test_running_core_failure_renders_error(
     client: TestClient, fake_core: FakeCoreClient
 ) -> None:
-    fake_core.error = CoreClientError(503, "service_unavailable", "Core collector backend unavailable")
+    fake_core.error = CoreClientError(
+        503, "service_unavailable", "Core collector backend unavailable"
+    )
     response = client.get("/running")
     assert response.status_code == 503
     assert "Core collector backend unavailable" in response.text
