@@ -18,6 +18,7 @@ from labserver_contracts.plans import (
     PlanRead,
     PlanUpdate,
 )
+from labserver_contracts.runtime import RuntimeOverviewRead
 from labserver_contracts.servers import ServerRead
 from labserver_contracts.users import UserRead
 from labserver_web.app import create_app
@@ -84,12 +85,14 @@ class FakeCoreClient(CoreClient):
         users: list[UserRead] | None = None,
         conflicts: dict[UUID, list[PlanConflictRead]] | None = None,
         dashboard: DashboardRead | None = None,
+        runtime_overview: RuntimeOverviewRead | None = None,
     ) -> None:
         self.plans = list(plans or [])
         self.servers = list(servers or [])
         self.users = list(users or [])
         self._conflicts = conflicts or {}
         self.dashboard = dashboard
+        self.runtime_overview = runtime_overview
         self.calls: list[tuple[str, Any]] = []
         self.error: Exception | None = None
         self.fail_at = 0
@@ -204,6 +207,17 @@ class FakeCoreClient(CoreClient):
             for s in self.servers
         ]
         return DashboardRead(cards=cards, observed_at=now)
+
+    def get_runtime_overview(
+        self, *, cookies: dict[str, str] | None = None
+    ) -> RuntimeOverviewRead:
+        self._maybe_fail()
+        self.calls.append(("get_runtime_overview", {"cookies": cookies}))
+        if self.runtime_overview is not None:
+            return self.runtime_overview
+        now = datetime.now(UTC)
+        return RuntimeOverviewRead(servers=[], observed_at=now)
+
 
 
 

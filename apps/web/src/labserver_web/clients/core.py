@@ -9,6 +9,7 @@ import httpx
 from labserver_contracts.auth import SessionRead
 from labserver_contracts.monitoring import DashboardRead, HostMetricsRead
 from labserver_contracts.plans import PlanConflictRead, PlanCreate, PlanRead, PlanUpdate
+from labserver_contracts.runtime import RuntimeOverviewRead
 from labserver_contracts.servers import ServerRead
 from labserver_contracts.users import UserRead
 
@@ -135,4 +136,11 @@ class CoreClient:
             "GET", f"/api/v1/monitoring/servers/{server_key}", cookies=cookies
         )
         return HostMetricsRead.model_validate(response.json())
+
+    def get_runtime_overview(
+        self, *, cookies: dict[str, str] | None = None
+    ) -> RuntimeOverviewRead:
+        response = self._request("GET", "/api/v1/runtime/overview", cookies=cookies)
+        return RuntimeOverviewRead.model_validate(response.json())
+
 
