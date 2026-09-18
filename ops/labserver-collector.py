@@ -166,6 +166,7 @@ def send_report(
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
+        "User-Agent": "LabServer-Collector/1.0",
     }
     if token:
         headers["Authorization"] = f"Bearer {token}"
