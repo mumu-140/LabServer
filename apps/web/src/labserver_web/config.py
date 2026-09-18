@@ -31,7 +31,12 @@ def load_settings(env: dict[str, str] | None = None) -> WebSettings:
         ZoneInfo(timezone_name)
     except (ZoneInfoNotFoundError, ValueError) as error:
         raise ValueError(f"Invalid LABSERVER_TIMEZONE: {timezone_name!r}") from error
+    core_url = (
+        environment.get("LABSERVER_CORE_URL")
+        or environment.get("LABSERVER_CORE_BASE_URL")
+        or DEFAULT_CORE_BASE_URL
+    )
     return WebSettings(
-        core_base_url=environment.get("LABSERVER_CORE_URL", DEFAULT_CORE_BASE_URL),
+        core_base_url=core_url,
         timezone_name=timezone_name,
     )
