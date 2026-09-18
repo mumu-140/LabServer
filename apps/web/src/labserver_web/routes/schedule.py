@@ -146,6 +146,8 @@ def _schedule_context(
 
     return {
         "request": request,
+        "viewer": viewer,
+        "active_tab": "schedule",
         "groups": groups,
         "server_key": server_key or "",
         "owner_id": str(owner_id) if owner_id else "",
@@ -259,6 +261,8 @@ def edit_planned_use_form(
         "schedule/edit.html",
         {
             "request": request,
+            "viewer": viewer,
+            "active_tab": "schedule",
             "plan": plan,
             "title_value": plan.title,
             "project_value": plan.project or "",
@@ -345,12 +349,14 @@ def edit_planned_use(
         data = PlanUpdate(**fields)
     except (ValueError, ValidationError):
         values["form_error"] = "Invalid planned use values."
-        return _render_edit_error(request, core, plan, values, 422)
+        return _render_edit_error(request, core, plan, values, 422, viewer=viewer)
     try:
         core.update_plan(plan.id, data)
     except CoreClientError as error:
         values["form_error"] = error.message
-        return _render_edit_error(request, core, plan, values, _core_error_status(error))
+        return _render_edit_error(
+            request, core, plan, values, _core_error_status(error), viewer=viewer
+        )
     return RedirectResponse(url="/schedule", status_code=303)
 
 
@@ -360,10 +366,13 @@ def _render_edit_error(
     plan: PlanRead,
     values: dict[str, Any],
     status_code: int,
+    viewer: ViewerContext | None = None,
 ) -> Any:
     zone: ZoneInfo = request.app.state.settings.timezone
     context = {
         "request": request,
+        "viewer": viewer,
+        "active_tab": "schedule",
         "plan": plan,
         "timezone_name": zone.key,
     }
