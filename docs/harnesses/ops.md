@@ -19,6 +19,17 @@ Scope: `ops/`, deployment templates under `configs/examples/`, and operational r
 - Agent collection logic.
 - Production secrets inside repository files.
 
+## Active Assets (M2-B)
+
+- `ops/Dockerfile`: Multi-stage, non-root (UID 1000) packaging using `python:3.13-slim` and locked `uv` workspace dependencies.
+- `ops/entrypoint-core.sh`: Runs Alembic migrations (`alembic upgrade head`) before starting Core FastAPI service.
+- `ops/docker-compose.yml`: Production composition defining `core` and `web`, fixed `10.255.30.0/24` subnet, `./data` volume, and `127.0.0.1` loopback bindings.
+- `configs/examples/.env.production.example`: Safe environment template with variable descriptions.
+- `ops/bootstrap-admin.sh`: Wrapper for one-time admin user creation.
+- `ops/backup.sh` & `ops/restore.sh`: Safe, transactionally consistent online SQLite backup and restore utilities.
+- `ops/smoke-loopback.sh`: Comprehensive end-to-end loopback verification against `127.0.0.1:18280`.
+- `docs/operations/deployment.md`: Production deployment, bootstrap, backup/restore, and upgrade runbook.
+
 ## Configuration rules
 
 - Real server IPs, tokens, passwords, SSH material, and deployment-specific usernames stay outside Git.
