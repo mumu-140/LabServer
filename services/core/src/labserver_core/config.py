@@ -18,6 +18,8 @@ class Settings:
     beszel_cache_ttl_seconds: float = 15.0
     beszel_freshness_threshold_seconds: float = 120.0
     beszel_key_map: dict[str, str] = field(default_factory=dict)
+    collector_token: str = ""
+    runtime_freshness_threshold_seconds: float = 120.0
 
     @classmethod
     def from_environment(cls) -> "Settings":
@@ -59,5 +61,9 @@ class Settings:
                 os.environ.get("LABSERVER_BESZEL_FRESHNESS_THRESHOLD_SECONDS", "120.0")
             ),
             beszel_key_map=key_map,
+            collector_token=os.environ.get("LABSERVER_COLLECTOR_TOKEN", ""),
+            runtime_freshness_threshold_seconds=float(
+                os.environ.get("LABSERVER_RUNTIME_FRESHNESS_THRESHOLD_SECONDS", "120.0")
+            ),
         )
 
