@@ -1,12 +1,12 @@
 # Current State
 
-Last updated: 2026-09-16
+Last updated: 2026-09-18
 
 ## Status
 
-M1.1 simple planning and M1.1H web hardening are merged and verified on `main`. Neither is deployed.
+M1.1 simple planning and M1.1H web hardening are merged and verified on `main` (PR #5 commit `3e7eacc`, PR #7 commit `752061f`). Neither is deployed.
 
-M2-A production auth adapter design is proposed (`docs/superpowers/specs/2026-09-16-m2-auth-adapter-design.md`) and awaiting approval. Nothing else in M2 has started.
+M2-A production auth adapter is implemented on branch `feat/m2-a-auth-adapter` and is ready for PR review and merge (PR #8). It is NOT MERGED and NOT DEPLOYED.
 
 ## Main baseline
 
@@ -18,6 +18,7 @@ M1.1H was squash-merged through PR #5:
 - Ruff: success;
 - mypy across Core + contracts + Web: success (42 files);
 - pytest: `141 passed`;
+- PR #7 (`752061fca1006a542bdd9b1ba6ae59d6e2df9f86`) recorded M1.1H merged state;
 - no production deployment has occurred.
 
 M1.1 itself was squash-merged through PR #4 (main commit `a2ce4a924cb017c3730fa393dc9f78d6fb882407`, merged-main CI run `35036877089`, `97 passed` at that point).
@@ -33,70 +34,45 @@ M1.1 itself was squash-merged through PR #4 (main commit `a2ce4a924cb017c3730fa3
 - First minimal Web harness: FastAPI + Jinja2 + vendored HTMX + plain CSS at `/schedule`.
 - Old request/approval/reservation product slice removed from active source/API.
 
-## M1.1H implementation state
+## M1.1H hardening delivered
 
-Branch:
+- Accepted ADR: `docs/adr/0001-simple-planning-model.md`
+- Approved hardening design: `docs/superpowers/specs/2026-09-16-m1-1h-web-hardening-design.md`
+- Implementation plan: `docs/superpowers/plans/2026-09-16-m1-1h-web-hardening.md`
+- All 7 hardening tasks implemented and merged to `main` via PR #5 (`3e7eacc`).
 
-`fix/m1-1h-web-hardening`
+## M2-A auth adapter (branch state)
 
-Implementation head (recorded immediately before the final M1.1H docs commit):
+Branch: `feat/m2-a-auth-adapter`
 
-`21098fd8bb291893ad27443fd07d2d7b7ad0e7a2`
+Approved design: `docs/superpowers/specs/2026-09-16-m2-auth-adapter-design.md`
+Implementation plan: `docs/superpowers/plans/2026-09-17-m2-a-auth-adapter.md`
 
-Accepted ADR:
+Status: Tasks 1–8 of the implementation plan are fully implemented. Ready for merge. NOT MERGED, NOT DEPLOYED.
 
-`docs/adr/0001-simple-planning-model.md`
+### M2-A delivered
 
-Approved hardening design:
+- **Auth contracts**: `LoginRequest`, `SessionRead`, `UserPasswordSet` in `labserver_contracts`.
+- **Persistence**: migration `0003_auth` adding nullable `password_hash` to `users` and `auth_sessions` table (token stored as SHA-256 hash). `0001`/`0002` untouched.
+- **Password hashing port**: `Argon2PasswordHasher` via `argon2-cffi`.
+- **Auth application service**: `AuthService` handling login (uniform 401), session resolution, logout, enabled admin check, and password rotation.
+- **Core HTTP API**: `/api/v1/auth/login`, `/api/v1/auth/logout`, `/api/v1/auth/me`, `/api/v1/users/{user_id}/password`. Real `get_current_actor` adapter reading session cookie.
+- **Admin bootstrap CLI**: `python -m labserver_core.bootstrap_admin <username> [--promote]`. Refuses if enabled admin exists. Generates random password, prints once, stores only hash.
+- **Web UI login surface**: `/login` (GET/POST), `/logout` (POST), `get_current_viewer` resolving cookie through Core `/me`.
+- **Deferred items**: None. All tasks from the plan delivered.
 
-`docs/superpowers/specs/2026-09-16-m1-1h-web-hardening-design.md`
+### Runbook note (operations)
 
-Implementation plan:
-
-`docs/superpowers/plans/2026-09-16-m1-1h-web-hardening.md`
-
-Status: Tasks 1-7 are implemented, merged to `main` through PR #5 (squash commit `3e7eacc3e5850e5c10a679fbe3c15d55189788fd`) with merged-main CI green (run `35079558365`). M1.1H is NOT DEPLOYED.
-
-## M1.1H issues (closed by the branch)
-
-The audit items below motivated M1.1H; each is closed on `fix/m1-1h-web-hardening`:
-
-1. `GET /api/v1/users` is still admin-only, but the member-visible Schedule requires the planning user directory for owner names/filtering.
-2. A single `PlanEntry` that by itself exceeds known CPU/RAM/GPU capacity can miss an advisory warning when there are no overlapping plans.
-3. Web currently interprets naive HTML `datetime-local` values as UTC instead of an explicit configured lab timezone.
-4. Schedule server filtering can still render unrelated empty server groups; unknown server filters can fall back to all plans; user/owner filter is missing.
-5. Web renders Cancel for every active plan and has no edit flow, despite owner/admin-only mutation semantics.
-6. Local form parsing/Pydantic failures and some Core/network errors can escape as unhandled Web 500s.
-7. Active API/harness documentation still has drift, including a documented server PATCH route that is not currently exposed.
-8. The M1.1 cross-harness decision lacked the ADR required by repository governance; ADR 0001 now records it.
-
-## M1.1H boundaries
-
-M1.1H is correctness hardening only.
-
-It does **not** add:
-
-- production human authentication;
-- header/query-string auth bypasses;
-- Docker/Compose;
-- Beszel;
-- Runtime Collector;
-- Running/Dashboard;
-- deployment to the current central host or compute nodes;
-- scheduler/job execution/process control.
-
-The Web will gain a default-deny `ViewerContext` seam for correct owner/admin rendering and testing, but the real production authentication adapter remains a deployment concern for M2.
+- **Admin Bootstrap**: On an initial deployment or empty database, run `python -m labserver_core.bootstrap_admin <username>` to generate the initial admin credentials. The printed password is never stored in plaintext.
+- **Cookie Security**: Set `LABSERVER_COOKIE_SECURE=true` in production behind TLS/HTTPS reverse proxies.
 
 ## Next gate
 
-M1.1 and M1.1H are both merged with merged-main CI green; the previous gate list is complete.
-
-M2 begins from the auth adapter, because both auth seams are hard default-deny and nothing is usable by a human:
-
-1. Approve (or amend) the M2-A auth adapter design (`docs/superpowers/specs/2026-09-16-m2-auth-adapter-design.md`), then produce its implementation plan.
-2. Implement the auth slice with the same task/commit/test discipline as M1.1/M1.1H.
-3. Only then the deployment form (Docker/compose/`ops/`, loopback-only validation) as a separate approved slice.
-4. Beszel primary monitoring + minimal read-only Runtime Collector come after; a public reverse-proxy mount is its own separately approved change.
+1. Verify complete test suite, lint, mypy, migration smoke, loopback smoke, architecture/terminology scans.
+2. Merge PR #8 for M2-A to `main` once CI passes.
+3. Only then begin M2-B: deployment form (Docker/Compose/`ops/`, loopback-only validation).
+4. Beszel primary monitoring + minimal read-only Runtime Collector come after.
+5. Public reverse-proxy mount on fwq10ys Caddy is a separate approved change.
 
 ## Important constraints
 

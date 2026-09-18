@@ -2,6 +2,8 @@ from fastapi import FastAPI
 
 from labserver_core.api.errors import install_exception_handlers
 from labserver_core.api.router import router
+from labserver_core.application.auth_service import AuthService
+from labserver_core.application.passwords import Argon2PasswordHasher
 from labserver_core.application.ports import UnitOfWork
 from labserver_core.config import Settings
 from labserver_core.persistence.database import create_engine_and_session_factory
@@ -15,11 +17,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def uow_factory() -> UnitOfWork:
         return SqlAlchemyUnitOfWork(session_factory)
 
+    hasher = Argon2PasswordHasher()
+    auth_service = AuthService(uow_factory, hasher, resolved)
+
     app = FastAPI(title="LabServer Core", version="0.1.0")
     app.state.settings = resolved
     app.state.engine = engine
     app.state.session_factory = session_factory
     app.state.uow_factory = uow_factory
+    app.state.hasher = hasher
+    app.state.auth_service = auth_service
     install_exception_handlers(app)
     app.include_router(router)
     return app

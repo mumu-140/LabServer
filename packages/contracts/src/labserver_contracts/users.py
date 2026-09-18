@@ -15,6 +15,10 @@ class UserCreate(StrictWriteModel):
     enabled: bool = True
 
 
+class UserPasswordSet(StrictWriteModel):
+    password: Annotated[str, StringConstraints(min_length=8)]
+
+
 class UserRead(ReadModel):
     id: UUID
     username: str

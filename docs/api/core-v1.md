@@ -95,3 +95,26 @@ Explicit GPU IDs compare against identical devices; count-only GPU intent checks
 `GET /api/v1/servers`, `POST /api/v1/servers`: admin-managed logical server registry with optional capacity declarations (`cpu_cores`, `memory_gb`, `gpu_count`). Real hosts and IPs are never part of the API surface.
 
 `GET /api/v1/users` is readable by any authenticated actor (member or admin): the planning user directory powers schedule owner filters and display names. `POST /api/v1/users` stays admin-only. The registry stores logical users (`admin`/`member`), used for ownership and display names.
+
+## Authentication and credentials
+
+Authentication in M2-A uses argon2id password hashing and server-side SQLite sessions (`auth_sessions`). Session tokens are stored as SHA-256 hashes; plaintext credentials never leave the host.
+
+### `POST /api/v1/auth/login`
+
+Accepts `{ "username": "...", "password": "..." }`. On success:
+- Sets `labserver_session` cookie (`HttpOnly`, `SameSite=Lax`, `Path=/`, `Secure` when `LABSERVER_COOKIE_SECURE=true`).
+- Returns `200 OK` with `{ "user_id": "...", "role": "..." }`.
+- On unknown user, wrong password, or disabled user, uniformly returns `401 Unauthorized` (`Invalid username or password`).
+
+### `POST /api/v1/auth/logout`
+
+Requires an active session. Invalidates the session in the database and returns `204 No Content` while clearing the session cookie.
+
+### `GET /api/v1/auth/me`
+
+Requires an active session. Returns `200 OK` with `{ "user_id": "...", "role": "..." }`.
+
+### `POST /api/v1/users/{user_id}/password`
+
+Admin-only endpoint. Accepts `{ "password": "..." }` (minimum 8 characters). Updates the user's argon2id password hash and returns `204 No Content`.

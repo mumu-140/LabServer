@@ -21,6 +21,11 @@ It is intentionally not a batch scheduler or general infrastructure-management p
 - Runtime association may use private IP addresses, but real addresses are deployment configuration and must not be committed.
 - Initial scale is small: optimize for clarity and operational simplicity rather than distributed-system scale.
 
+## Delivery discipline
+
+- Lesson from M1.1 (2026-09-16 audit): scope that was planned but not delivered must be listed explicitly as deferred items in `CURRENT_STATE.md` at delivery time. Unrecorded deferrals made the gap discoverable only by a post-hoc audit.
+- Same rule applies to any deviation from an approved plan: record it where the status is written, not in the implementer's memory.
+
 ## Durable architecture decisions
 
 ### Monitoring

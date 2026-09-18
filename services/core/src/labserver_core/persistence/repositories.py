@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from labserver_core.domain.entities import (
     AuditEvent,
+    AuthSession,
     ManagedServer,
     PlanEntry,
     ServerCapacity,
@@ -15,6 +16,7 @@ from labserver_core.domain.entities import (
 
 from .models import (
     AuditEventModel,
+    AuthSessionModel,
     ManagedServerModel,
     PlanEntryModel,
     UserModel,
@@ -27,6 +29,10 @@ def _as_utc(value: datetime) -> datetime:
     return value.astimezone(UTC)
 
 
+def _utc_now() -> datetime:
+    return datetime.now(UTC)
+
+
 def _user_from_model(model: UserModel) -> User:
     return User(
         id=model.id,
@@ -36,6 +42,7 @@ def _user_from_model(model: UserModel) -> User:
         enabled=model.enabled,
         created_at=_as_utc(model.created_at),
         updated_at=_as_utc(model.updated_at),
+        password_hash=model.password_hash,
     )
 
 
@@ -85,12 +92,70 @@ class UserRepository:
                 enabled=user.enabled,
                 created_at=user.created_at,
                 updated_at=user.updated_at,
+                password_hash=user.password_hash,
             )
         )
+
+    def save(self, user: User) -> None:
+        model = self._session.get(UserModel, user.id)
+        if model is None:
+            raise KeyError(f"User {user.id} does not exist")
+        model.username = user.username
+        model.display_name = user.display_name
+        model.role = user.role.value
+        model.enabled = user.enabled
+        model.password_hash = user.password_hash
+        model.updated_at = user.updated_at
 
     def list_all(self) -> list[User]:
         models = self._session.scalars(select(UserModel).order_by(UserModel.username)).all()
         return [_user_from_model(model) for model in models]
+
+    def set_password_hash(self, user_id: UUID, password_hash: str) -> None:
+        model = self._session.get(UserModel, user_id)
+        if model is None:
+            raise KeyError(f"User {user_id} does not exist")
+        model.password_hash = password_hash
+        model.updated_at = _utc_now()
+
+
+class AuthSessionRepository:
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def add(self, session_record: AuthSession) -> None:
+        self._session.add(
+            AuthSessionModel(
+                token_hash=session_record.token_hash,
+                user_id=session_record.user_id,
+                created_at=session_record.created_at,
+                expires_at=session_record.expires_at,
+            )
+        )
+
+    def get(self, token_hash: str) -> AuthSession | None:
+        model = self._session.get(AuthSessionModel, token_hash)
+        if model is None:
+            return None
+        return AuthSession(
+            token_hash=model.token_hash,
+            user_id=model.user_id,
+            created_at=_as_utc(model.created_at),
+            expires_at=_as_utc(model.expires_at),
+        )
+
+    def delete(self, token_hash: str) -> None:
+        model = self._session.get(AuthSessionModel, token_hash)
+        if model is not None:
+            self._session.delete(model)
+
+    def delete_expired(self, now: datetime) -> int:
+        stale = self._session.scalars(
+            select(AuthSessionModel).where(AuthSessionModel.expires_at <= now)
+        ).all()
+        for model in stale:
+            self._session.delete(model)
+        return len(stale)
 
 
 class ServerRepository:

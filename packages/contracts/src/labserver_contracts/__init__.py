@@ -1,3 +1,4 @@
+from .auth import LoginRequest, SessionRead
 from .common import (
     ConflictCertainty,
     ConflictResource,
@@ -12,12 +13,13 @@ from .plans import (
     PlanUpdate,
 )
 from .servers import ServerCreate, ServerRead, ServerUpdate
-from .users import UserCreate, UserRead
+from .users import UserCreate, UserPasswordSet, UserRead
 
 __all__ = [
     "ConflictCertainty",
     "ConflictResource",
     "ErrorResponse",
+    "LoginRequest",
     "PlanConflictRead",
     "PlanCreate",
     "PlanDisplayState",
@@ -27,6 +29,8 @@ __all__ = [
     "ServerRead",
     "ServerUpdate",
     "UserCreate",
+    "UserPasswordSet",
     "UserRead",
+    "SessionRead",
     "UserRole",
 ]

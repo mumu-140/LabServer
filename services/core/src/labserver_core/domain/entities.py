@@ -15,6 +15,17 @@ class User:
     enabled: bool
     created_at: datetime
     updated_at: datetime
+    password_hash: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class AuthSession:
+    """A server-side login session; only the token hash is ever stored."""
+
+    token_hash: str
+    user_id: UUID
+    created_at: datetime
+    expires_at: datetime
 
 
 @dataclass(frozen=True, slots=True)
