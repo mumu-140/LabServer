@@ -71,9 +71,9 @@ def provision_user(
     request: Request,
     core: CoreClientDep,
     viewer: AdminDep,
-    username: Annotated[str, Form()],
-    display_name: Annotated[str, Form()],
-    password: Annotated[str, Form()],
+    username: Annotated[str, Form()] = "",
+    display_name: Annotated[str, Form()] = "",
+    password: Annotated[str, Form()] = "",
     role: Annotated[str, Form()] = "member",
 ) -> Any:
     cookies = _get_cookies(request)
@@ -121,7 +121,7 @@ def reset_password(
     user_id: UUID,
     core: CoreClientDep,
     viewer: AdminDep,
-    password: Annotated[str, Form()],
+    password: Annotated[str, Form()] = "",
 ) -> Any:
     cookies = _get_cookies(request)
     if len(password) < 8:
@@ -145,7 +145,7 @@ def toggle_user_status(
     user_id: UUID,
     core: CoreClientDep,
     viewer: AdminDep,
-    enabled: Annotated[str, Form()],
+    enabled: Annotated[str, Form()] = "",
 ) -> Any:
     cookies = _get_cookies(request)
     is_enabled = enabled.lower() in ("true", "1", "yes")

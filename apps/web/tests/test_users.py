@@ -48,15 +48,13 @@ def test_regular_member_forbidden_from_users(client: TestClient) -> None:
     )
 
 
-def test_navigation_shows_users_link_only_for_admin(
-    client: TestClient, admin_client: TestClient
-) -> None:
-    # Member should not see Users link
+def test_navigation_member_cannot_see_users_link(client: TestClient) -> None:
     resp_member = client.get("/")
     assert resp_member.status_code == 200
     assert 'href="/users"' not in resp_member.text
 
-    # Admin should see Users link
+
+def test_navigation_admin_sees_users_link(admin_client: TestClient) -> None:
     resp_admin = admin_client.get("/")
     assert resp_admin.status_code == 200
     assert 'href="/users"' in resp_admin.text
