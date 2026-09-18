@@ -3,12 +3,15 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, status
 
+from labserver_core.adapters.monitoring import HostMetricsProvider
 from labserver_core.application.actors import CurrentActor
 from labserver_core.application.auth_service import AuthService
+from labserver_core.application.monitoring_service import MonitoringService
 from labserver_core.application.plan_service import PlanService
 from labserver_core.application.ports import UnitOfWork, UnitOfWorkFactory
 from labserver_core.application.server_service import ServerService
 from labserver_core.application.user_service import UserService
+
 
 
 def get_uow_factory(request: Request) -> UnitOfWorkFactory:
@@ -50,6 +53,15 @@ def get_plan_service(
     uow_factory: Annotated[UnitOfWorkFactory, Depends(get_uow_factory)],
 ) -> PlanService:
     return PlanService(uow_factory)
+
+
+def get_monitoring_service(
+    request: Request,
+    uow_factory: Annotated[UnitOfWorkFactory, Depends(get_uow_factory)],
+) -> MonitoringService:
+    metrics_provider: HostMetricsProvider = request.app.state.metrics_provider
+    return MonitoringService(uow_factory, metrics_provider)
+
 
 
 def require_database_ready(request: Request) -> None:
