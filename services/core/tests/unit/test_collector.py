@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 from labserver_contracts.runtime import HostRuntimeReport
 
-COLLECTOR_PATH = Path(__file__).resolve().parents[3] / "ops" / "labserver-collector.py"
+COLLECTOR_PATH = Path(__file__).resolve().parents[4] / "ops" / "labserver-collector.py"
 spec = importlib.util.spec_from_file_location("labserver_collector", COLLECTOR_PATH)
 assert spec is not None and spec.loader is not None
 collector = importlib.util.module_from_spec(spec)
