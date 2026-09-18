@@ -126,17 +126,6 @@
   --surface-hover: var(--bg-card-hover);
 }
 
-  --radius-sm: 4px;
-  --radius: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-
-  --surface: var(--bg-card);
-  --surface-card: var(--bg-card);
-  --surface-subtle: var(--bg-subtle);
-  --surface-hover: var(--bg-card-hover);
-}
-
 *, *::before, *::after {
   box-sizing: border-box;
 }
@@ -396,6 +385,7 @@ body {
   height: 7px;
   border-radius: 50%;
   display: inline-block;
+}
 .theme-dot-ink {
   background: radial-gradient(circle, #cbb279 35%, #181d24 95%);
   box-shadow: 0 0 6px rgba(203, 178, 121, 0.6);
