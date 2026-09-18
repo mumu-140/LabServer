@@ -114,6 +114,9 @@ def test_runtime_correlation_matches_plan_and_detects_unplanned(tmp_path: Path) 
                 updated_at=now,
             )
         )
+        uow.commit()
+
+    with uow_factory() as uow:
         # Seed active plan for yangs on GPU 0
         uow.plans.add(
             PlanEntry(
