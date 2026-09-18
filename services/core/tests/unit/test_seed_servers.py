@@ -6,7 +6,7 @@ from alembic.config import Config
 from labserver_core.config import Settings
 from labserver_core.persistence.database import create_engine_and_session_factory
 from labserver_core.persistence.repositories import ServerRepository
-from labserver_core.seed_servers import DEFAULT_FLEET_SERVERS, main
+from labserver_core.seed_servers import main
 
 CORE_DIR = Path(__file__).resolve().parents[2]
 
