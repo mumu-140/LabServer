@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import logging
 import time
 from datetime import UTC, datetime
@@ -130,14 +131,13 @@ class BeszelAdapter:
 
         # Try PocketBase >=0.23 superuser endpoint
         superuser_url = f"{self._hub_url}/api/collections/_superusers/auth-with-password"
-        try:
+        with contextlib.suppress(httpx.HTTPError):
             resp = await client.post(superuser_url, json=body)
             if resp.status_code == 200:
                 token = str(resp.json().get("token", ""))
                 self._token = token
                 return token
-        except httpx.HTTPError:
-            pass
+
 
         # Fallback to users endpoint
         users_url = f"{self._hub_url}/api/collections/users/auth-with-password"
@@ -241,10 +241,8 @@ class BeszelAdapter:
         updated_at = None
         raw_updated = item.get("updated")
         if raw_updated:
-            try:
+            with contextlib.suppress(Exception):
                 updated_at = _parse_utc_datetime(str(raw_updated))
-            except Exception:
-                pass
 
         # Freshness evaluation
         now_utc = datetime.now(UTC)
@@ -274,10 +272,9 @@ class BeszelAdapter:
         load_average = None
         raw_la = info.get("la")
         if isinstance(raw_la, list) and len(raw_la) >= 3:
-            try:
+            with contextlib.suppress(ValueError, TypeError):
                 load_average = (float(raw_la[0]), float(raw_la[1]), float(raw_la[2]))
-            except (ValueError, TypeError):
-                pass
+
 
         # Memory calculations using server static capacity if available
         memory_total_gb = memory_gb
