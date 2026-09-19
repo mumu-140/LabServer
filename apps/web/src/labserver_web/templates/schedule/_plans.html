@@ -1,6 +1,10 @@
 {% for group in groups %}
-<article class="server-group">
-  <h2>{{ group.server.display_name }} <span class="server-key">({{ group.server.key }})</span></h2>
+<details class="server-group" {% if group.rows %}open{% endif %}>
+  <summary class="server-group-summary">
+    <span class="sg-caret" aria-hidden="true">▸</span>
+    <span class="sg-title">{{ group.server.display_name }} <span class="server-key">({{ group.server.key }})</span></span>
+    <span class="sg-count">{% if group.rows %}{{ group.rows|length }} 项预约{% else %}无预约{% endif %}</span>
+  </summary>
   {% if group.rows %}
   <div style="overflow-x: auto;">
     <table class="plans">
@@ -38,7 +42,7 @@
               <span>编辑</span>
               <span class="sr-only">Edit</span>
             </a>
-            <form method="post" action="/schedule/{{ row.plan.id }}/cancel" style="display: inline-block; margin: 0;">
+            <form method="post" action="/schedule/{{ row.plan.id }}/cancel" style="display:inline;">
               <button type="submit" class="cancel">
                 <span>撤销</span>
                 <span class="sr-only">Cancel</span>
@@ -54,7 +58,7 @@
   {% else %}
   <p class="empty">当前筛选条件下暂无算力预约。<span class="sr-only">No planned use for this view yet.</span></p>
   {% endif %}
-</article>
+</details>
 {% endfor %}
 {% if not groups %}
 <p class="empty">暂无注册的计算服务器节点。<span class="sr-only">No servers are registered yet.</span></p>
