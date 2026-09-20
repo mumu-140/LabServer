@@ -21,10 +21,8 @@
   </div>
 {% else %}
   <div class="running-server-list">
-    {# 活跃(active)节点在上，空闲/陈旧/无进程置底；不改后端排序，仅表现层两趟渲染 #}
-    {% set active_servers = servers | selectattr('status.value', 'equalto', 'active') | list %}
-    {% set other_servers = servers | rejectattr('status.value', 'equalto', 'active') | list %}
-    {% for server in (active_servers + other_servers) %}
+    {# 活跃(active)节点在上，空闲/陈旧置底；按状态字母序排 active<idle<stale 恰好满足，不改后端排序 #}
+    {% for server in (servers | sort(attribute='status.value')) %}
       <div class="card running-server-card" id="server-{{ server.server_key }}">
         <div class="card-header">
           <div class="card-title-group">
