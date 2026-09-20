@@ -43,11 +43,22 @@
 <p class="error alert-error" role="alert">{{ form_error }}</p>
 {% endif %}
 
-{% include "schedule/_timeline.html" %}
+<div id="schedule-live"
+     hx-get="{{ request.url }}"
+     hx-trigger="every 30s"
+     hx-select="#schedule-live"
+     hx-target="this"
+     hx-swap="outerHTML"
+     hx-sync="this:replace">
+  <div class="schedule-live-meta" aria-hidden="true">
+    <span class="auto-refresh-hint">排期数据每 30 秒自动刷新</span>
+  </div>
+  {% include "schedule/_timeline.html" %}
 
-<section id="plans" aria-label="排期计划一览">
-  {% include "schedule/_plans.html" %}
-</section>
+  <section id="plans" aria-label="排期计划一览">
+    {% include "schedule/_plans.html" %}
+  </section>
+</div>
 
 <section class="add-planned-use" aria-label="新建算力预约">
   <h2>新建算力预约 <span class="sr-only">Add planned use</span></h2>
