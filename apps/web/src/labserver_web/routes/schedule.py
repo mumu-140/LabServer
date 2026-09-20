@@ -81,6 +81,12 @@ def _core_error_page(request: Request, error: CoreClientError) -> Any:
     return _error_page(request, error.message, _core_error_status(error))
 
 
+def _session_cookies(request: Request) -> dict[str, str] | None:
+    """Forward the viewer's Core session cookie so Core authorizes the call."""
+    token = request.cookies.get("labserver_session")
+    return {"labserver_session": token} if token else None
+
+
 def _schedule_context(
     request: Request,
     core: CoreClient,
@@ -91,9 +97,10 @@ def _schedule_context(
     day: date_type | None,
 ) -> dict[str, Any]:
     zone: ZoneInfo = request.app.state.settings.timezone
+    cookies = _session_cookies(request)
 
-    servers = {item.key: item for item in core.list_servers()}
-    users = {user.id: user for user in core.list_users()}
+    servers = {item.key: item for item in core.list_servers(cookies=cookies)}
+    users = {user.id: user for user in core.list_users(cookies=cookies)}
 
     if server_key is not None and server_key not in servers:
         raise HTTPException(status_code=422, detail=f"Unknown server key: {server_key}")
@@ -109,11 +116,16 @@ def _schedule_context(
         owner_id=owner_id,
         start=start,
         end=end,
+        cookies=cookies,
     )
 
     rows: list[dict[str, Any]] = []
     for plan in plans:
-        warnings = core.list_conflicts(plan.id) if plan.cancelled_at is None else []
+        warnings = (
+            core.list_conflicts(plan.id, cookies=cookies)
+            if plan.cancelled_at is None
+            else []
+        )
         owner = users.get(plan.owner_id)
         rows.append(
             {
@@ -211,9 +223,13 @@ def _plan_create_from_form(
 
 
 def _load_changeable_plan(
-    core: CoreClient, plan_id: UUID, viewer: ViewerContext
+    core: CoreClient,
+    plan_id: UUID,
+    viewer: ViewerContext,
+    *,
+    cookies: dict[str, str] | None = None,
 ) -> PlanRead:
-    plan = core.get_plan(plan_id)
+    plan = core.get_plan(plan_id, cookies=cookies)
     if not _can_change(viewer, plan):
         raise HTTPException(
             status_code=403,
@@ -250,7 +266,9 @@ def edit_planned_use_form(
     plan_id: UUID, request: Request, core: CoreClientDep, viewer: ViewerDep
 ) -> Any:
     try:
-        plan = _load_changeable_plan(core, plan_id, viewer)
+        plan = _load_changeable_plan(
+            core, plan_id, viewer, cookies=_session_cookies(request)
+        )
     except CoreClientError as error:
         return _core_error_page(request, error)
     if plan.cancelled_at is not None:
@@ -319,7 +337,9 @@ def edit_planned_use(
     note: Annotated[str, Form()] = "",
 ) -> Any:
     try:
-        plan = _load_changeable_plan(core, plan_id, viewer)
+        plan = _load_changeable_plan(
+            core, plan_id, viewer, cookies=_session_cookies(request)
+        )
     except CoreClientError as error:
         return _core_error_page(request, error)
     if plan.cancelled_at is not None:
@@ -351,7 +371,7 @@ def edit_planned_use(
         values["form_error"] = "Invalid planned use values."
         return _render_edit_error(request, core, plan, values, 422, viewer=viewer)
     try:
-        core.update_plan(plan.id, data)
+        core.update_plan(plan.id, data, cookies=_session_cookies(request))
     except CoreClientError as error:
         values["form_error"] = error.message
         return _render_edit_error(
@@ -433,7 +453,10 @@ def create_planned_use(
         )
 
     try:
-        servers = {item.key: item for item in core.list_servers()}
+        servers = {
+            item.key: item
+            for item in core.list_servers(cookies=_session_cookies(request))
+        }
     except CoreClientError as error:
         return _core_error_page(request, error)
     server = servers.get(server_key)
@@ -456,7 +479,7 @@ def create_planned_use(
     except (ValueError, ValidationError):
         return _form_error("Invalid planned use values.", 422)
     try:
-        core.create_plan(data)
+        core.create_plan(data, cookies=_session_cookies(request))
     except CoreClientError as error:
         return _form_error(error.message, _core_error_status(error))
     return RedirectResponse(url="/schedule", status_code=303)
@@ -467,7 +490,7 @@ def cancel_planned_use(
     plan_id: UUID, request: Request, core: CoreClientDep, viewer: ViewerDep
 ) -> Any:
     try:
-        core.cancel_plan(plan_id)
+        core.cancel_plan(plan_id, cookies=_session_cookies(request))
     except CoreClientError as error:
         return _core_error_page(request, error)
     return RedirectResponse(url="/schedule", status_code=303)

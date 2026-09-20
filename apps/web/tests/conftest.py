@@ -104,9 +104,9 @@ class FakeCoreClient(CoreClient):
         if self.error is not None and self._call_number == self.fail_at:
             raise self.error
 
-    def list_servers(self) -> list[ServerRead]:
+    def list_servers(self, *, cookies: dict[str, str] | None = None) -> list[ServerRead]:
         self._maybe_fail()
-        self.calls.append(("list_servers", None))
+        self.calls.append(("list_servers", cookies))
         return list(self.servers)
 
     def list_users(self, *, cookies: dict[str, str] | None = None) -> list[UserRead]:
@@ -174,6 +174,7 @@ class FakeCoreClient(CoreClient):
         start: datetime | None = None,
         end: datetime | None = None,
         include_cancelled: bool = False,
+        cookies: dict[str, str] | None = None,
     ) -> list[PlanRead]:
         self._maybe_fail()
         self.calls.append(
@@ -185,12 +186,13 @@ class FakeCoreClient(CoreClient):
                     "start": start,
                     "end": end,
                     "include_cancelled": include_cancelled,
+                    "cookies": cookies,
                 },
             )
         )
         return list(self.plans)
 
-    def get_plan(self, plan_id: UUID) -> PlanRead:
+    def get_plan(self, plan_id: UUID, *, cookies: dict[str, str] | None = None) -> PlanRead:
         self._maybe_fail()
         self.calls.append(("get_plan", plan_id))
         for plan in self.plans:
@@ -198,17 +200,23 @@ class FakeCoreClient(CoreClient):
                 return plan
         return plan_read(id=str(plan_id))
 
-    def list_conflicts(self, plan_id: UUID) -> list[PlanConflictRead]:
+    def list_conflicts(
+        self, plan_id: UUID, *, cookies: dict[str, str] | None = None
+    ) -> list[PlanConflictRead]:
         self._maybe_fail()
         self.calls.append(("list_conflicts", plan_id))
         return list(self._conflicts.get(plan_id, []))
 
-    def update_plan(self, plan_id: UUID, data: PlanUpdate) -> PlanRead:
+    def update_plan(
+        self, plan_id: UUID, data: PlanUpdate, *, cookies: dict[str, str] | None = None
+    ) -> PlanRead:
         self._maybe_fail()
         self.calls.append(("update_plan", {"plan_id": plan_id, "data": data}))
         return plan_read(id=str(plan_id))
 
-    def create_plan(self, data: PlanCreate) -> PlanRead:
+    def create_plan(
+        self, data: PlanCreate, *, cookies: dict[str, str] | None = None
+    ) -> PlanRead:
         self._maybe_fail()
         self.calls.append(("create_plan", data))
         created = plan_read(
@@ -227,7 +235,7 @@ class FakeCoreClient(CoreClient):
         self.plans.append(created)
         return created
 
-    def cancel_plan(self, plan_id: UUID) -> PlanRead:
+    def cancel_plan(self, plan_id: UUID, *, cookies: dict[str, str] | None = None) -> PlanRead:
         self._maybe_fail()
         self.calls.append(("cancel_plan", plan_id))
         return plan_read(

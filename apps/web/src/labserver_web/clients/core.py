@@ -58,8 +58,8 @@ class CoreClient:
             raise CoreClientError(response.status_code, code, message)
         return response
 
-    def list_servers(self) -> list[ServerRead]:
-        payload = self._request("GET", "/api/v1/servers").json()
+    def list_servers(self, *, cookies: dict[str, str] | None = None) -> list[ServerRead]:
+        payload = self._request("GET", "/api/v1/servers", cookies=cookies).json()
         return [ServerRead.model_validate(item) for item in payload]
 
     def list_users(self, *, cookies: dict[str, str] | None = None) -> list[UserRead]:
@@ -103,6 +103,7 @@ class CoreClient:
         start: datetime | None = None,
         end: datetime | None = None,
         include_cancelled: bool = False,
+        cookies: dict[str, str] | None = None,
     ) -> list[PlanRead]:
         params: dict[str, Any] = {"include_cancelled": str(include_cancelled).lower()}
         if server_id is not None:
@@ -113,28 +114,42 @@ class CoreClient:
             params["start"] = start.isoformat()
         if end is not None:
             params["end"] = end.isoformat()
-        payload = self._request("GET", "/api/v1/plans", params=params).json()
+        payload = self._request("GET", "/api/v1/plans", params=params, cookies=cookies).json()
         return [PlanRead.model_validate(item) for item in payload]
 
-    def get_plan(self, plan_id: UUID) -> PlanRead:
-        payload = self._request("GET", f"/api/v1/plans/{plan_id}").json()
+    def get_plan(self, plan_id: UUID, *, cookies: dict[str, str] | None = None) -> PlanRead:
+        payload = self._request("GET", f"/api/v1/plans/{plan_id}", cookies=cookies).json()
         return PlanRead.model_validate(payload)
 
-    def create_plan(self, data: PlanCreate) -> PlanRead:
-        payload = self._request("POST", "/api/v1/plans", json=data.model_dump(mode="json")).json()
+    def create_plan(
+        self, data: PlanCreate, *, cookies: dict[str, str] | None = None
+    ) -> PlanRead:
+        payload = self._request(
+            "POST", "/api/v1/plans", json=data.model_dump(mode="json"), cookies=cookies
+        ).json()
         return PlanRead.model_validate(payload)
 
-    def update_plan(self, plan_id: UUID, data: PlanUpdate) -> PlanRead:
+    def update_plan(
+        self, plan_id: UUID, data: PlanUpdate, *, cookies: dict[str, str] | None = None
+    ) -> PlanRead:
         body = data.model_dump(mode="json", exclude_unset=True)
-        payload = self._request("PATCH", f"/api/v1/plans/{plan_id}", json=body).json()
+        payload = self._request(
+            "PATCH", f"/api/v1/plans/{plan_id}", json=body, cookies=cookies
+        ).json()
         return PlanRead.model_validate(payload)
 
-    def cancel_plan(self, plan_id: UUID) -> PlanRead:
-        payload = self._request("POST", f"/api/v1/plans/{plan_id}/cancel").json()
+    def cancel_plan(self, plan_id: UUID, *, cookies: dict[str, str] | None = None) -> PlanRead:
+        payload = self._request(
+            "POST", f"/api/v1/plans/{plan_id}/cancel", cookies=cookies
+        ).json()
         return PlanRead.model_validate(payload)
 
-    def list_conflicts(self, plan_id: UUID) -> list[PlanConflictRead]:
-        payload = self._request("GET", f"/api/v1/plans/{plan_id}/conflicts").json()
+    def list_conflicts(
+        self, plan_id: UUID, *, cookies: dict[str, str] | None = None
+    ) -> list[PlanConflictRead]:
+        payload = self._request(
+            "GET", f"/api/v1/plans/{plan_id}/conflicts", cookies=cookies
+        ).json()
         return [PlanConflictRead.model_validate(item) for item in payload]
 
     def login(self, username: str, password: str) -> tuple[SessionRead, str]:

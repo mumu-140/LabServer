@@ -84,6 +84,10 @@ code{font-family:var(--mono)}
 .observed-at{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:var(--f0);
   color:var(--text-2);padding:8px 14px;border:1px solid var(--border);border-radius:var(--r-pill);background:var(--surface)}
 .observed-dot{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+.observed-dot{animation:pulse-dot 2s var(--ease) infinite}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.35}}
+.auto-refresh-hint{color:var(--text-3,var(--text-2));font-size:var(--f0);opacity:.8}
+.schedule-live-meta{display:flex;justify-content:flex-end;margin:0 0 6px;font-family:var(--mono)}
 
 /* ===== 通用卡片 ===== */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--s5);
