@@ -21,7 +21,8 @@
   </div>
 {% else %}
   <div class="running-server-list">
-    {% for server in servers %}
+    {# 活跃(active)节点在上，空闲/陈旧置底；按状态字母序排 active<idle<stale 恰好满足，不改后端排序 #}
+    {% for server in (servers | sort(attribute='status.value')) %}
       <div class="card running-server-card" id="server-{{ server.server_key }}">
         <div class="card-header">
           <div class="card-title-group">

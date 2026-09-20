@@ -1,0 +1,48 @@
+{# 跑道甘特片段：直接从 schedule 路由已有的 groups 计算，不改 route / core。
+   groups = [ { server:{display_name,key}, rows:[{plan, owner, overlap, window, ...}] } ]
+   plan.start_at / end_at 为 UTC datetime；部署时区 Asia/Shanghai 固定 +8（无 DST）。
+   预览近似：本地小时 = (utc_hour + 8) % 24，映射到 24 列网格（1-indexed）。
+   排序：有预约的服务器在上，无预约的置底。 #}
+{% set tz_offset = 8 %}
+{% macro _lane(group, tz_offset) %}
+<div class="lane{% if not group.rows %} lane-empty{% endif %}">
+  <div class="lane-name">
+    <b>{{ group.server.display_name }}</b>
+    <span>{{ group.server.key }}</span>
+  </div>
+  <div class="lane-body">
+    {% for row in group.rows %}
+      {% set sh = (row.plan.start_at.hour + tz_offset) % 24 %}
+      {% set eh_raw = (row.plan.end_at.hour + tz_offset) % 24 %}
+      {% set eh = eh_raw if eh_raw > sh else 24 %}
+      <div class="seg-block {{ row.plan.display_state.value }}{% if row.overlap %} conflict{% endif %}"
+           style="grid-column: {{ sh + 1 }} / {{ eh + 1 }};"
+           title="{{ row.plan.title }} · {{ row.owner }} · {{ row.window }}">
+        <div class="sb-t">{{ row.plan.title }}{% if row.overlap %} ⚠{% endif %}</div>
+        <div class="sb-m">{{ row.owner }}</div>
+      </div>
+    {% endfor %}
+    {% if not group.rows %}<div class="lane-idle">当日无预约</div>{% endif %}
+  </div>
+</div>
+{% endmacro %}
+<section class="tl" aria-label="服务器算力跑道时间线">
+  <div class="tl-legend">
+    <span><i class="tl-sw sw-ongoing"></i>进行中</span>
+    <span><i class="tl-sw sw-upcoming"></i>待启动</span>
+    <span><i class="tl-sw sw-past"></i>已结束</span>
+    <span><i class="tl-sw sw-conflict"></i>时段冲突</span>
+  </div>
+  <div class="lanes">
+    <div class="tl-axis">
+      <span class="tl-axis-pad"></span>
+      <div class="tl-ticks">
+        {% for h in [0,2,4,6,8,10,12,14,16,18,20,22] %}<i>{{ h }}</i>{% endfor %}
+      </div>
+    </div>
+    {# 有预约的跑道在上、无预约置底：先渲染 rows 非空，再渲染空 #}
+    {% for group in groups if group.rows %}{{ _lane(group, tz_offset) }}{% endfor %}
+    {% for group in groups if not group.rows %}{{ _lane(group, tz_offset) }}{% endfor %}
+  </div>
+  <p class="tl-tip">▸ 跑道按当日 0–24 时排布（基准时区 {{ timezone_name }}）；红色斜纹段为时段冲突，无预约服务器置于底部。</p>
+</section>

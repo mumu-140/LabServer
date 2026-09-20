@@ -4,32 +4,19 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{% block title %}算力中枢 — LabServer{% endblock %}</title>
-    <link rel="stylesheet" href="/static/app.css?v=7" />
+    <link rel="stylesheet" href="/static/app.css?v=8" />
     <script src="/static/vendor/htmx-2.0.4.min.js" defer></script>
-    <script>
-      (function() {
-        try {
-          var t = localStorage.getItem('labserver-theme');
-          if (t !== 'cyber') {
-            t = 'ink';
-          }
-          document.documentElement.setAttribute('data-theme', t);
-        } catch(e) {}
-      })();
-    </script>
   </head>
   <body>
-    <div class="cyber-ambient-glow" aria-hidden="true"></div>
     <header class="site-header">
       <div class="header-inner">
         <div class="brand-nav">
           <a class="brand" href="/">
-            <span class="brand-seal-icon" aria-hidden="true">算</span>
+            <span class="brand-mark" aria-hidden="true">L</span>
             <div class="brand-text-group">
               <span class="brand-name">算力中枢</span>
               <span class="brand-sub">LabServer</span>
             </div>
-            <span class="telemetry-tag ink-seal-tag">云枢</span>
           </a>
           {% if viewer %}
           <nav class="main-nav">
@@ -58,20 +45,11 @@
           </nav>
           {% endif %}
         </div>
+        <span class="header-spacer"></span>
         <div class="header-actions">
-          <div class="theme-switcher" role="radiogroup" aria-label="界面风格">
-            <button type="button" class="theme-btn" data-set-theme="ink" title="水墨古风（默认）">
-              <span class="theme-dot theme-dot-ink"></span>
-              <span class="theme-label">水墨</span>
-            </button>
-            <button type="button" class="theme-btn" data-set-theme="cyber" title="科技风（赛博）">
-              <span class="theme-dot theme-dot-cyber"></span>
-              <span class="theme-label">科技</span>
-            </button>
-          </div>
           {% if viewer %}
           <div class="user-nav">
-            <span class="role-tag role-tag-seal">
+            <span class="role-tag">
               {% if viewer.role.value == 'admin' %}管理员{% else %}研究员{% endif %}
               <span class="sr-only">{{ viewer.role.value }}</span>
             </span>
@@ -91,33 +69,5 @@
     <main class="page">
       {% block content %}{% endblock %}
     </main>
-
-    <script>
-      (function() {
-        function syncThemeUI(theme) {
-          var btns = document.querySelectorAll('.theme-btn');
-          btns.forEach(function(btn) {
-            if (btn.getAttribute('data-set-theme') === theme) {
-              btn.classList.add('active');
-            } else {
-              btn.classList.remove('active');
-            }
-          });
-        }
-        var cur = document.documentElement.getAttribute('data-theme') || 'ink';
-        syncThemeUI(cur);
-
-        document.addEventListener('click', function(e) {
-          var btn = e.target.closest('.theme-btn');
-          if (!btn) return;
-          var next = btn.getAttribute('data-set-theme');
-          if (next) {
-            document.documentElement.setAttribute('data-theme', next);
-            try { localStorage.setItem('labserver-theme', next); } catch(err) {}
-            syncThemeUI(next);
-          }
-        });
-      })();
-    </script>
   </body>
 </html>
