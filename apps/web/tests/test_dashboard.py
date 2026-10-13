@@ -86,6 +86,8 @@ def test_authenticated_member_sees_dashboard_cards(
     assert "24.5%" in body
     assert "60.0%" in body
     assert "45.0%" in body
+    assert "153.6 / 256.0 GB" in body
+    assert "900.0 / 2000.0 GB" in body
     assert "1 active" in body
     assert "RNA-seq assembly" in body
     assert "https://beszel.example.com/system/fwq10" in body
