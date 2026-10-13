@@ -317,8 +317,8 @@ class BeszelAdapter:
         memory_used_gb = (
             float(stats["mu"]) if stats.get("mu") is not None else None
         )
-        if memory_used_gb is None and memory_total_gb is not None and memory_percent is not None:
-            memory_used_gb = round(memory_total_gb * memory_percent / 100.0, 1)
+        # Do not present estimated used memory as an observed measurement.
+        # A missing stats sample leaves the used amount unavailable.
 
         disk_total_gb = (
             float(stats["d"]) if stats.get("d") is not None
