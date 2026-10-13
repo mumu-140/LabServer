@@ -156,10 +156,10 @@
               <span class="metric-val">
                 {% if card.metrics and card.metrics.memory_percent is not none %}
                   {{ "%.1f"|format(card.metrics.memory_percent) }}%
-                  {% if card.metrics.memory_used_gb is not none and card.server.memory_gb is not none %}
-                    <span class="capacity-spec">({{ "%.0f"|format(card.metrics.memory_used_gb) }}/{{ "%.0f"|format(card.server.memory_gb) }} GB)</span>
-                  {% elif card.server.memory_gb is not none %}
-                    <span class="capacity-spec">({{ "%.0f"|format(card.server.memory_gb) }} GB)</span>
+                  {% if card.metrics.memory_used_gb is not none and card.metrics.memory_total_gb is not none %}
+                    <span class="capacity-spec">({{ "%.1f"|format(card.metrics.memory_used_gb) }} / {{ "%.1f"|format(card.metrics.memory_total_gb) }} GB)</span>
+                  {% elif card.metrics.memory_total_gb is not none %}
+                    <span class="capacity-spec">(容量 {{ "%.1f"|format(card.metrics.memory_total_gb) }} GB，已用量未知)</span>
                   {% endif %}
                 {% else %}
                   -
@@ -183,7 +183,9 @@
                 {% if card.metrics and card.metrics.disk_percent is not none %}
                   {{ "%.1f"|format(card.metrics.disk_percent) }}%
                   {% if card.metrics.disk_used_gb is not none and card.metrics.disk_total_gb is not none %}
-                    <span class="capacity-spec">({{ "%.0f"|format(card.metrics.disk_used_gb) }}/{{ "%.0f"|format(card.metrics.disk_total_gb) }} GB)</span>
+                    <span class="capacity-spec">({{ "%.1f"|format(card.metrics.disk_used_gb) }} / {{ "%.1f"|format(card.metrics.disk_total_gb) }} GB)</span>
+                  {% else %}
+                    <span class="capacity-spec">(已用 / 总量：暂无数据)</span>
                   {% endif %}
                 {% else %}
                   -
