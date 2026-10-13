@@ -232,6 +232,8 @@ async def test_beszel_adapter_caching_within_ttl() -> None:
     call_count = {"systems": 0}
 
     def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path != "/api/collections/systems/records":
+            return httpx.Response(404)
         call_count["systems"] += 1
         return httpx.Response(
             200,
