@@ -261,3 +261,27 @@ async def test_beszel_adapter_caching_within_ttl() -> None:
     assert m1["fwq10"].cpu_percent == 12.0
     assert m2["fwq10"].cpu_percent == 12.0
     assert call_count["systems"] == 1
+
+
+@pytest.mark.anyio
+async def test_beszel_adapter_reads_absolute_values_from_latest_stats() -> None:
+    now_iso = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S.000Z")
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/systems/records"):
+            return httpx.Response(200, json={"items": [
+                {"id": "sys1", "name": "fwq10", "status": "up",
+                 "updated": now_iso, "info": {"cpu": 12, "mp": 50, "dp": 25}}
+            ]})
+        if request.url.path.endswith("/system_stats/records"):
+            assert 'type="1m"' in request.url.params["filter"]
+            return httpx.Response(200, json={"items": [
+                {"stats": {"m": 256, "mu": 100, "d": 2048, "du": 512}}
+            ]})
+        return httpx.Response(404)
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    adapter = BeszelAdapter(hub_url="http://mock", token="test", http_client=client)
+    host = (await adapter.get_metrics(["fwq10"], {"fwq10": (128, 32)}))["fwq10"]
+    assert (host.memory_total_gb, host.memory_used_gb) == (256, 100)
+    assert (host.disk_total_gb, host.disk_used_gb) == (2048, 512)
+    assert host.memory_percent == 50
+    assert host.disk_percent == 25
