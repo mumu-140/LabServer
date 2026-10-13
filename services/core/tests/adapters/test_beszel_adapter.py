@@ -105,7 +105,7 @@ async def test_beszel_adapter_successful_fetch_and_mapping() -> None:
     assert fwq.cpu_percent == 15.2
     assert fwq.memory_percent == 50.0
     assert fwq.memory_total_gb == 256.0
-    assert fwq.memory_used_gb == 128.0
+    assert fwq.memory_used_gb is None  # no observed sample; do not estimate
     assert fwq.disk_percent == 40.0
     assert fwq.disk_total_gb == 2000.0
     assert fwq.disk_used_gb == 800.0
