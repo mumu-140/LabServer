@@ -287,3 +287,37 @@ async def test_beszel_adapter_reads_absolute_values_from_latest_stats() -> None:
     assert (host.disk_total_gb, host.disk_used_gb) == (2048, 512)
     assert host.memory_percent == 50
     assert host.disk_percent == 25
+
+
+@pytest.mark.anyio
+async def test_beszel_adapter_reauthenticates_on_empty_authenticated_list() -> None:
+    now_iso = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S.000Z")
+    calls = {"auth": 0, "systems": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "/auth-with-password" in request.url.path:
+            calls["auth"] += 1
+            return httpx.Response(200, json={"token": "fresh-token"})
+        if request.url.path == "/api/collections/systems/records":
+            calls["systems"] += 1
+            if request.headers.get("Authorization") == "Bearer expired-token":
+                return httpx.Response(200, json={"items": []})
+            return httpx.Response(200, json={"items": [
+                {"id": "sys1", "name": "fwq10", "status": "up", "updated": now_iso,
+                 "info": {"cpu": 10.0}}
+            ]})
+        return httpx.Response(404)
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    adapter = BeszelAdapter(
+        hub_url="http://mock-beszel:8090",
+        username="admin@example.com",
+        password="secretpassword",
+        http_client=client,
+    )
+    adapter._token = "expired-token"
+
+    metrics = await adapter.get_metrics(["fwq10"])
+    assert metrics["fwq10"].status == HostStatus.UP
+    assert metrics["fwq10"].cpu_percent == 10.0
+    assert calls == {"auth": 1, "systems": 2}
