@@ -162,8 +162,18 @@ class BeszelAdapter:
             url = f"{self._hub_url}/api/collections/systems/records?perPage=100"
             resp = await client.get(url, headers=headers)
 
-            # If token expired, retry auth once
-            if resp.status_code == 401 and not self._static_token and self._username:
+            # Preserve the deployed on-host workaround for Beszel returning
+            # a filtered 200/empty list when an authenticated token is stale.
+            empty_with_token = (
+                resp.status_code == 200
+                and bool(token)
+                and not resp.json().get("items")
+            )
+            if (
+                (resp.status_code == 401 or empty_with_token)
+                and not self._static_token
+                and self._username
+            ):
                 self._token = None
                 token = await self._authenticate(client)
                 headers["Authorization"] = f"Bearer {token}"
@@ -172,6 +182,8 @@ class BeszelAdapter:
             resp.raise_for_status()
             data = resp.json()
             items = data.get("items", [])
+            if empty_with_token and not items:
+                raise ValueError("Beszel returned no systems after reauthentication")
 
             # Beszel keeps absolute disk/memory values in system_stats, not
             # the system summary. Fetch at most one recent 1m record per host.
