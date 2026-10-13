@@ -1,3 +1,4 @@
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi.testclient import TestClient
@@ -41,7 +42,12 @@ def test_plan_endpoints_default_deny(api_context: ApiContext) -> None:
 def test_plan_create_is_direct_publication(api_context: ApiContext) -> None:
     client = as_member(api_context)
 
-    response = client.post("/api/v1/plans", json=payload(gpu_count=1))
+    start = datetime.now(UTC) + timedelta(days=1)
+    end = start + timedelta(hours=2)
+    response = client.post(
+        "/api/v1/plans",
+        json=payload(gpu_count=1, start_at=start.isoformat(), end_at=end.isoformat()),
+    )
     assert response.status_code == 201
     body = response.json()
     assert "status" not in body

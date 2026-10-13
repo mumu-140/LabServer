@@ -162,8 +162,18 @@ class BeszelAdapter:
             url = f"{self._hub_url}/api/collections/systems/records?perPage=100"
             resp = await client.get(url, headers=headers)
 
-            # If token expired, retry auth once
-            if resp.status_code == 401 and not self._static_token and self._username:
+            # Preserve the deployed on-host workaround for Beszel returning
+            # a filtered 200/empty list when an authenticated token is stale.
+            empty_with_token = (
+                resp.status_code == 200
+                and bool(token)
+                and not resp.json().get("items")
+            )
+            if (
+                (resp.status_code == 401 or empty_with_token)
+                and not self._static_token
+                and self._username
+            ):
                 self._token = None
                 token = await self._authenticate(client)
                 headers["Authorization"] = f"Bearer {token}"
@@ -172,6 +182,38 @@ class BeszelAdapter:
             resp.raise_for_status()
             data = resp.json()
             items = data.get("items", [])
+            if empty_with_token and not items:
+                raise ValueError("Beszel returned no systems after reauthentication")
+
+            # Beszel keeps absolute disk/memory values in system_stats, not
+            # the system summary. Fetch at most one recent 1m record per host.
+            # Limit concurrency so a large fleet cannot saturate the Hub.
+            semaphore = asyncio.Semaphore(4)
+
+            async def attach_stats(item: dict[str, Any]) -> None:
+                system_id = str(item.get("id", ""))
+                if not system_id:
+                    return
+                async with semaphore:
+                    try:
+                        result = await client.get(
+                            f"{self._hub_url}/api/collections/system_stats/records",
+                            params={
+                                "filter": f'system="{system_id}" && type="1m"',
+                                "sort": "-created",
+                                "perPage": 1,
+                            },
+                            headers=headers,
+                        )
+                        result.raise_for_status()
+                        rows = result.json().get("items", [])
+                        if rows and isinstance(rows[0].get("stats"), dict):
+                            item["_latest_stats"] = rows[0]["stats"]
+                    except (httpx.HTTPError, ValueError, TypeError, KeyError):
+                        # A host without history still supplies percentage gauges.
+                        pass
+
+            await asyncio.gather(*(attach_stats(item) for item in items))
 
             indexed: dict[str, dict[str, Any]] = {}
             for item in items:
@@ -276,15 +318,28 @@ class BeszelAdapter:
                 load_average = (float(raw_la[0]), float(raw_la[1]), float(raw_la[2]))
 
 
-        # Memory calculations using server static capacity if available
-        memory_total_gb = memory_gb
-        memory_used_gb = None
-        if memory_total_gb is not None and memory_percent is not None:
-            memory_used_gb = round(memory_total_gb * (memory_percent / 100.0), 1)
+        # The 1m sample carries observed GB values; static capacity is a
+        # fallback and should not displace a live measurement.
+        stats = item.get("_latest_stats")
+        if not isinstance(stats, dict):
+            stats = {}
+        memory_total_gb = (
+            float(stats["m"]) if stats.get("m") is not None else memory_gb
+        )
+        memory_used_gb = (
+            float(stats["mu"]) if stats.get("mu") is not None else None
+        )
+        # Do not present estimated used memory as an observed measurement.
+        # A missing stats sample leaves the used amount unavailable.
 
-        # Disk values if available in info
-        disk_total_gb = float(info["d"]) if "d" in info and info["d"] is not None else None
-        disk_used_gb = float(info["du"]) if "du" in info and info["du"] is not None else None
+        disk_total_gb = (
+            float(stats["d"]) if stats.get("d") is not None
+            else float(info["d"]) if info.get("d") is not None else None
+        )
+        disk_used_gb = (
+            float(stats["du"]) if stats.get("du") is not None
+            else float(info["du"]) if info.get("du") is not None else None
+        )
 
         upstream_name = item.get("name") or server_key
         upstream_url = None
